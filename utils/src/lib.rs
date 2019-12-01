@@ -7,11 +7,8 @@ use std::str::FromStr;
 pub fn read_file(file_name:&str)  -> impl Iterator<Item = String> {
     let file = File::open(file_name).expect("could not open file");
     let reader = BufReader::new(file);
-    reader.lines().map(|line| match line {
-        Ok(line) => line,
-        Err(_) => panic!("unable to read line")
-    }   
-    )
+    reader.lines().map(|line| line.expect("failed to read line from file"))
+    
 }  
 
 // Load a file and return an iterator of parseable types, eg a file with an int on each line

@@ -15,7 +15,7 @@ pub fn read_file(file_name:&str)  -> impl Iterator<Item = String> {
 pub fn read_fromstr<T>(file_name:&str) -> impl Iterator<Item = T>
 where T: FromStr, <T as FromStr>::Err : std::fmt::Debug
 {
-    read_file(file_name).map(|line| line.parse::<T>().unwrap())
+    read_file(file_name).map(|line| line.parse::<T>().expect(&format!("unable to parse {}",line)))
 } 
 
 /// Put a string on the system clipboard

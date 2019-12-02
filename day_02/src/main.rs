@@ -17,7 +17,7 @@ fn run_computer(digits: &mut Vec<i64>) -> i64 {
                     a * b
                 } else {
                     panic!("error");
-                }
+                };
         }
     }
     digits[0]
@@ -49,13 +49,11 @@ fn part2() {
         for verb in 0..100 {
             let mut digits = original_digits.clone();
             digits[1] = noun;
-            digits[2] = verb;
-            let r = run_computer(&mut digits);
-            if r == 19690720 {
+            digits[2] = verb;           
+            if run_computer(&mut digits) == 19690720 {
                 println!("{} {}",noun,verb);
                 clip(format!("{}",100*noun+verb));
             }
-
         }
     }
 

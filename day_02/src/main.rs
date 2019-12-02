@@ -1,16 +1,15 @@
 use utils::*;
 
-fn run_computer(digits: &mut Vec<i64>) -> i64 {
+fn run_computer(digits: &mut [i64]) -> i64 {
     for i in (0..digits.len()).step_by(4) {
         if digits[i] == 99 {
             break;
         } else {
-            let pos_in1 = digits[i + 1] as usize;
-            let pos_in2 = digits[i + 2] as usize;
-            let a = digits[pos_in1];
-            let b = digits[pos_in2];
-            let pos_out = digits[i + 3] as usize;
-            digits[pos_out] = 
+            
+            let a = digits[digits[i + 1] as usize];
+            let b = digits[digits[i + 2] as usize];
+            
+            digits[digits[i + 3] as usize] = 
                 if digits[i] == 1 {
                     a + b
                 } else if digits[i] == 2 {

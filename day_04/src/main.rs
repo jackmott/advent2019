@@ -5,12 +5,9 @@ impl Digits {
     fn new(num: i32) -> Digits {
         let mut digits: Vec<u8> = Vec::new();
         let mut n = num;
-        loop {
+        while n > 0 {
             digits.push((n % 10) as u8);
-            n /= 10;
-            if n == 0 {
-                break;
-            }
+            n /= 10;            
         }
         digits.reverse();
         Digits { digits }

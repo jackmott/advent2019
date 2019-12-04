@@ -31,10 +31,10 @@ fn main() {
                 letter_counts.insert(c,1);
             }  
         }
-        if letter_counts.values().find(|n| **n == 2).is_some() {
+        if letter_counts.values().any(|&n| n == 2) {
             two_count += 1;
         }
-        if letter_counts.values().find (|n| **n == 3).is_some() {
+        if letter_counts.values().any(|&n| n == 3) {
             three_count +=1;
         }       
     }

@@ -7,7 +7,7 @@ impl Digits {
         let mut n = num;
         while n > 0 {
             digits.push((n % 10) as u8);
-            n /= 10;            
+            n /= 10;
         }
         digits.reverse();
         Digits { digits }
@@ -22,21 +22,20 @@ impl Digits {
         num
     }
     fn is_valid1(&self) -> bool {
-        let mut digits_count :[i32;10] = [0;10];
+        let mut digits_count: [i32; 10] = [0; 10];
         for d in &self.digits {
             digits_count[*d as usize] += 1;
         }
-        digits_count.iter().any(|count| *count >=2)
+        digits_count.iter().any(|count| *count >= 2)
     }
-    
+
     fn is_valid2(&self) -> bool {
-        let mut digits_count :[i32;10] = [0;10];
+        let mut digits_count: [i32; 10] = [0; 10];
         for d in &self.digits {
             digits_count[*d as usize] += 1;
         }
-        digits_count.iter().any(|count| *count ==2)
+        digits_count.iter().any(|count| *count == 2)
     }
-    
 }
 
 // todo - is there a way to not have to clone the array?
@@ -53,7 +52,7 @@ impl Iterator for Digits {
                 for j in i + 1..digits.len() {
                     digits[j] = digits[i];
                 }
-                return Some(Digits{digits:clone});
+                return Some(Digits { digits: clone });
             } else {
                 if i == 0 {
                     break;
@@ -66,20 +65,16 @@ impl Iterator for Digits {
     }
 }
 
-
 fn main() {
-
-    let answer1 = Digits::new(388888)    
+    let answer1 = Digits::new(388888)
         .filter(Digits::is_valid1)
         .take_while(|digits| digits.to_num() < 843167)
-        .count(); 
-    println!("answer1:{}",answer1);
+        .count();
+    println!("answer1:{}", answer1);
 
-   
-
-   let answer2 = Digits::new(388888)    
-        .filter(Digits::is_valid2)        
+    let answer2 = Digits::new(388888)
+        .filter(Digits::is_valid2)
         .take_while(|digits| digits.to_num() < 843167)
-        .count(); 
-    println!("answer:{}",answer2);
+        .count();
+    println!("answer:{}", answer2);
 }

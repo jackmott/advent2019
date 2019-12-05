@@ -1,18 +1,19 @@
 use utils::*;
-fn run_computer(digits: &mut [i64]) -> i64 {
+fn run_computer(digits: &mut [i64], input: i64) -> i64 {
     let mut i = 0;
     loop {
         if digits[i] == 99 {
             break;
         } else {
-            println!("instruction:{}", digits[i]);
             let instruction = to_digits(digits[i]);
 
+            // Extract op code from instruction
             let op_code = if instruction.len() == 1 {
                 digits[i]
             } else {
                 to_num(&instruction[instruction.len() - 2..])
             };
+
             //set param modes
             let mut params = [0, 0, 0];
             if instruction.len() > 2 {
@@ -24,7 +25,6 @@ fn run_computer(digits: &mut [i64]) -> i64 {
             if instruction.len() > 4 {
                 params[2] = instruction[instruction.len() - 5];
             }
-            println!("params:{:?}", params);
 
             if op_code == 1 {
                 let a = if params[0] == 0 {
@@ -37,9 +37,6 @@ fn run_computer(digits: &mut [i64]) -> i64 {
                 } else {
                     digits[i + 2]
                 };
-                println!("i:{}", i);
-                println!("a:{} b:{}", a, b);
-                println!("store at:{}", digits[i + 3]);
                 digits[digits[i + 3] as usize] = a + b;
                 i += 4;
             } else if op_code == 2 {
@@ -53,12 +50,10 @@ fn run_computer(digits: &mut [i64]) -> i64 {
                 } else {
                     digits[i + 2]
                 };
-                println!("a:{} b:{}", a, b);
-                println!("store at:{}", digits[i + 3]);
                 digits[digits[i + 3] as usize] = a * b;
                 i += 4;
             } else if op_code == 3 {
-                digits[digits[i + 1] as usize] = 5;
+                digits[digits[i + 1] as usize] = input;
                 i += 2;
             } else if op_code == 4 {
                 println!("output:{}", digits[digits[i + 1] as usize]);
@@ -74,8 +69,11 @@ fn run_computer(digits: &mut [i64]) -> i64 {
                 } else {
                     digits[i + 2]
                 };
-                if jump != 0 { i = i_ptr as usize; } else { i+=3; }
-                
+                if jump != 0 {
+                    i = i_ptr as usize;
+                } else {
+                    i += 3;
+                }
             } else if op_code == 6 {
                 let jump = if params[0] == 0 {
                     digits[digits[i + 1] as usize]
@@ -87,7 +85,11 @@ fn run_computer(digits: &mut [i64]) -> i64 {
                 } else {
                     digits[i + 2]
                 };
-                if jump == 0 { i = i_ptr as usize; } else { i+=3; }
+                if jump == 0 {
+                    i = i_ptr as usize;
+                } else {
+                    i += 3;
+                }
             } else if op_code == 7 {
                 let a = if params[0] == 0 {
                     digits[digits[i + 1] as usize]
@@ -98,7 +100,7 @@ fn run_computer(digits: &mut [i64]) -> i64 {
                     digits[digits[i + 2] as usize]
                 } else {
                     digits[i + 2]
-                };                
+                };
                 digits[digits[i + 3] as usize] = if a < b { 1 } else { 0 };
                 i += 4;
             } else if op_code == 8 {
@@ -111,7 +113,7 @@ fn run_computer(digits: &mut [i64]) -> i64 {
                     digits[digits[i + 2] as usize]
                 } else {
                     digits[i + 2]
-                };                
+                };
                 digits[digits[i + 3] as usize] = if a == b { 1 } else { 0 };
                 i += 4;
             } else {
@@ -151,5 +153,10 @@ fn main() {
         .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
-    run_computer(&mut digits[..]);
+    let mut digits_clone = digits.clone();
+
+    // part1
+    run_computer(&mut digits[..], 1);
+    // part2
+    run_computer(&mut digits_clone[..], 5);
 }

@@ -30,12 +30,14 @@ fn main() {
         })
         .collect();
 
+    // Part 1 - compute the sum of all paths
     let mut count = 0;
     for key in h.keys() {
         count += count_ancestors(key, &h);
     }
     println!("count:{}", count);
 
+    // Part 2
     count = 0;
     let mut node = &h["SAN"];
     // count distance to common ancestor

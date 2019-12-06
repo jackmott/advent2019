@@ -22,16 +22,13 @@ fn contains_parent(node: &str, target_parent: &str, h: &HashMap<String, String>)
 }
 
 fn main() {
-    let mut h = HashMap::<String, String>::new();
-
     // Build up a tree in the form of a hash table with nodes indexed by planet name
-    read_file("input.txt").for_each(|line| {
-        let orbits: Vec<&str> = line.split(')').collect();
-        let parent = orbits[0];
-        let child = orbits[1];
-
-        h.insert(child.to_string(), parent.to_string());
-    });
+    let h: HashMap<String, String> = read_file("input.txt")
+        .map(|line| {
+            let orbits: Vec<&str> = line.split(')').collect();
+            (orbits[1].to_string(), orbits[0].to_string())
+        })
+        .collect();
 
     let mut count = 0;
     for key in h.keys() {

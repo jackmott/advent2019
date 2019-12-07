@@ -1,147 +1,190 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::thread;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::{Receiver, Sender,SendError};
 use utils::*;
 
-//Todo, clean this crap up
-/*
 struct SuperComputer {
-    memory:Vec<i64>,
-    sp:usize,
-    input_queue:Vec<i64>
+    name:String,
+    digits: Vec<i64>,
+    sp: usize,
+    output_channel: Sender<i64>,
+    input_channel: Receiver<i64>,
+    last_output:Option<i64>,
+}
+use ParameterMode::*;
+enum ParameterMode {
+    Value,
+    Pointer,
+}
+impl From<u8> for ParameterMode {
+    fn from(n: u8) -> Self {
+        match n {
+            0 => Pointer,
+            1 => Value,
+            _ => panic!("invalid parameter mode"),
+        }
+    }
+}
+
+enum OpCode {
+    Add,
+    Mul,
+    Input,
+    Output,
+    JumpIfTrue,
+    JumpIfFalse,
+    LessThan,
+    Equals,
+    Halt,
+}
+use OpCode::*;
+impl From<u8> for OpCode {
+    fn from(n: u8) -> Self {
+        match n {
+            1 => Add,
+            2 => Mul,
+            3 => Input,
+            4 => Output,
+            5 => JumpIfTrue,
+            6 => JumpIfFalse,
+            7 => LessThan,
+            8 => Equals,
+            99 => Halt,
+            _ => panic!("invalid op code"),
+        }
+    }
 }
 
 impl SuperComputer {
+    fn new(
+        name: String,
+        digits: Vec<i64>,
+        output_channel: Sender<i64>,
+        input_channel: Receiver<i64>,
+    ) -> SuperComputer {
+        SuperComputer {
+            name,
+            digits,
+            sp: 0,
+            output_channel,
+            input_channel,
+            last_output: None
+        }
+    }
 
-}*/
-
-fn run_computer(digits: &mut [i64],sp:usize,input1: i64, input2:i64) -> (usize,Option<i64>) {
-    let mut input_count = 0;
-    let mut i = sp;
-    loop {
-        if digits[i] == 99 {
-            return (i,None);
-        } else {
-            let instruction = to_digits(digits[i]);
+    fn run(&mut self) {
+        loop {
+            let instruction = to_digits(self.digits[self.sp]);
 
             // Extract op code from instruction
-            let op_code = if instruction.len() == 1 {
-                digits[i]
+            let op_code_num = if instruction.len() == 1 {
+                instruction[0] as i64
             } else {
                 to_num(&instruction[instruction.len() - 2..])
             };
+            let op_code = OpCode::from(op_code_num as u8);
 
             //set param modes
-            let mut params = [0, 0, 0];
+            let mut param_modes = [Pointer, Pointer, Pointer];
             if instruction.len() > 2 {
-                params[0] = instruction[instruction.len() - 3];
+                param_modes[0] = ParameterMode::from(instruction[instruction.len() - 3]);
             }
             if instruction.len() > 3 {
-                params[1] = instruction[instruction.len() - 4];
+                param_modes[1] = ParameterMode::from(instruction[instruction.len() - 4]);
             }
             if instruction.len() > 4 {
-                params[2] = instruction[instruction.len() - 5];
+                param_modes[2] = ParameterMode::from(instruction[instruction.len() - 5]);
             }
 
-            if op_code == 1 {
-                let a = if params[0] == 0 {
-                    digits[digits[i + 1] as usize]
-                } else {
-                    digits[i + 1]
-                };
-                let b = if params[1] == 0 {
-                    digits[digits[i + 2] as usize]
-                } else {
-                    digits[i + 2]
-                };
-                digits[digits[i + 3] as usize] = a + b;
-                i += 4;
-            } else if op_code == 2 {
-                let a = if params[0] == 0 {
-                    digits[digits[i + 1] as usize]
-                } else {
-                    digits[i + 1]
-                };
-                let b = if params[1] == 0 {
-                    digits[digits[i + 2] as usize]
-                } else {
-                    digits[i + 2]
-                };
-                digits[digits[i + 3] as usize] = a * b;
-                i += 4;
-            } else if op_code == 3 {
-                digits[digits[i + 1] as usize] =
-                    if input_count == 0 {
-                        input_count +=1;
-                        input1
-                    } else {
-                        input2
-                    };
-                i += 2;
-            } else if op_code == 4 {
-                let result = Some(digits[digits[i + 1] as usize]);
-                i += 2;
-                return (i,result);
-            } else if op_code == 5 {
-                let jump = if params[0] == 0 {
-                    digits[digits[i + 1] as usize]
-                } else {
-                    digits[i + 1]
-                };
-                let i_ptr = if params[1] == 0 {
-                    digits[digits[i + 2] as usize]
-                } else {
-                    digits[i + 2]
-                };
-                if jump != 0 {
-                    i = i_ptr as usize;
-                } else {
-                    i += 3;
-                }
-            } else if op_code == 6 {
-                let jump = if params[0] == 0 {
-                    digits[digits[i + 1] as usize]
-                } else {
-                    digits[i + 1]
-                };
-                let i_ptr = if params[1] == 0 {
-                    digits[digits[i + 2] as usize]
-                } else {
-                    digits[i + 2]
-                };
-                if jump == 0 {
-                    i = i_ptr as usize;
-                } else {
-                    i += 3;
-                }
-            } else if op_code == 7 {
-                let a = if params[0] == 0 {
-                    digits[digits[i + 1] as usize]
-                } else {
-                    digits[i + 1]
-                };
-                let b = if params[1] == 0 {
-                    digits[digits[i + 2] as usize]
-                } else {
-                    digits[i + 2]
-                };
-                digits[digits[i + 3] as usize] = if a < b { 1 } else { 0 };
-                i += 4;
-            } else if op_code == 8 {
-                let a = if params[0] == 0 {
-                    digits[digits[i + 1] as usize]
-                } else {
-                    digits[i + 1]
-                };
-                let b = if params[1] == 0 {
-                    digits[digits[i + 2] as usize]
-                } else {
-                    digits[i + 2]
-                };
-                digits[digits[i + 3] as usize] = if a == b { 1 } else { 0 };
-                i += 4;
-            } else {
-                panic!(format!("error:{}", op_code));
+
+            let num_params = match op_code {
+                Add | Mul | LessThan | Equals | JumpIfTrue | JumpIfFalse => 2,
+                Input | Output => 1,
+                Halt => 0,
             };
+            let mut input_params = Vec::new();
+            for i in 0..num_params {
+                let value = self.digits[self.sp + i + 1];
+                match param_modes[i] {
+                    Pointer => input_params.push(self.digits[value as usize]),
+                    Value => input_params.push(value),
+                }
+            }
+
+            match op_code {
+                Halt => {
+                    //println!("{} Halting",self.name);
+                    break;
+                }
+                Add => {
+                    let write_address = self.digits[self.sp + 3] as usize;
+                    self.digits[write_address] = input_params[0] + input_params[1];
+                    self.sp += 4;
+                }
+                Mul => {
+                    let write_address = self.digits[self.sp + 3] as usize;
+                    self.digits[write_address] = input_params[0] * input_params[1];
+                    self.sp += 4;
+                }
+                Input => {
+                    let write_address = self.digits[self.sp + 1] as usize;
+                    match self.input_channel.recv() {
+                        Ok(input) => {
+                            self.digits[write_address] = input;
+                            self.sp += 2;
+                        }
+                        Err(_) => {
+                            //println!("Input channel dead on {}",self.name);
+                            break
+                        }
+                    }
+                }
+                Output => match self.output_channel.send(input_params[0]) {
+                    Ok(_) => {
+                        self.last_output = Some(input_params[0]);
+                        self.sp += 2;
+                    }
+                    Err(_) => {
+                        self.last_output = Some(input_params[0]);
+                        //println!("Output channel dead on {}",self.name);
+                        break;
+                    }
+                },
+                JumpIfTrue => {
+                    if input_params[0] != 0 {
+                        self.sp = input_params[1] as usize;
+                    } else {
+                        self.sp += 3;
+                    }
+                }
+                JumpIfFalse => {
+                    if input_params[0] == 0 {
+                        self.sp = input_params[1] as usize;
+                    } else {
+                        self.sp += 3;
+                    }
+                }
+                LessThan => {
+                    let write_address = self.digits[self.sp + 3] as usize;
+                    self.digits[write_address] =
+                        if input_params[0] < input_params[1] {
+                            1
+                        } else {
+                            0
+                        };
+                    self.sp += 4;
+                }
+                Equals => {
+                    let write_address = self.digits[self.sp + 3] as usize;
+                    self.digits[write_address] =
+                        if input_params[0] == input_params[1] {
+                            1
+                        } else {
+                            0
+                        };
+                    self.sp += 4;
+                }
+            }
         }
     }
 }
@@ -190,7 +233,7 @@ fn perm(mut nums: Vec<i64>) -> Vec<Vec<i64>> {
 }
 
 
-fn main() {
+fn main() ->  Result<(),SendError<i64>> {
     let digits: Vec<i64> = read_file("input.txt")
     .nth(0)
     .unwrap()
@@ -204,61 +247,107 @@ fn main() {
 
     let mut max = -999999;
     for perm in perms {
-        let mut digits1 = digits.clone();
-        let mut digits2 = digits.clone();
-        let mut digits3 = digits.clone();
-        let mut digits4 = digits.clone();
-        let mut digits5 = digits.clone();
 
-        let (_,a) = run_computer(&mut digits1,0,perm[0],0);
-        let (_,b) = run_computer(&mut digits2,0,perm[1],a.unwrap());
-        let (_,c) = run_computer(&mut digits3,0,perm[2],b.unwrap());
-        let (_,d) = run_computer(&mut digits4,0,perm[3],c.unwrap());
-        let (_,e) = run_computer(&mut digits5,0,perm[4],d.unwrap());
-        if e.unwrap() > max {
-            max = e.unwrap();
+        let digits_a = digits.clone();
+        let digits_b = digits.clone();
+        let digits_c = digits.clone();
+        let digits_d = digits.clone();
+        let digits_e = digits.clone();
 
+        let (a_send,a_in) = channel();
+        let (a_out,a_recv) = channel();
+        a_out.send(perm[1])?;
+        thread::spawn( move || {
+            SuperComputer::new("A".to_string(),digits_a,a_out,a_in).run();
+        });
+        a_send.send(perm[0])?;
+        a_send.send(0)?;
+
+        let (b_out,b_recv) = channel();
+        b_out.send(perm[2])?;
+        thread::spawn( move || {
+            SuperComputer::new("B".to_string(),digits_b,b_out,a_recv).run();
+        });
+
+        let (c_out,c_recv) = channel();
+        c_out.send(perm[3])?;
+        thread::spawn( move || {
+            SuperComputer::new("C".to_string(),digits_c,c_out,b_recv).run();
+        });
+
+        let (d_out,d_recv) = channel();
+        d_out.send(perm[4])?;
+        thread::spawn( move || {
+            SuperComputer::new("D".to_string(),digits_d,d_out,c_recv).run();
+        });
+
+        let (e_out,e_recv) = channel();
+        thread::spawn( move || {
+            SuperComputer::new("E".to_string(),digits_e,e_out,d_recv).run();
+        });
+
+        match e_recv.recv() {
+            Ok(e) => if e > max { max = e },
+            Err(_) => panic!("we broke")
         }
 
     }
     println!("max:{}",max);
+
 
     // part2
     let nums : Vec<i64> = vec![5,6,7,8,9];
     let perms = perm(nums);
     max = -9999999;
+
     for perm in perms {
+        let digits_a = digits.clone();
+        let digits_b = digits.clone();
+        let digits_c = digits.clone();
+        let digits_d = digits.clone();
+        let digits_e = digits.clone();
 
-        let mut digits1 = digits.clone();
-        let mut digits2 = digits.clone();
-        let mut digits3 = digits.clone();
-        let mut digits4 = digits.clone();
-        let mut digits5 = digits.clone();
+        let (result_send,result_recv) = channel();
+        let (a_out,a_recv) = channel();
+        a_out.send(perm[1])?;
+        let (b_out,b_recv) = channel();
+        b_out.send(perm[2])?;
+        let (c_out,c_recv) = channel();
+        c_out.send(perm[3])?;
+        let (d_out,d_recv) = channel();
+        d_out.send(perm[4])?;
+        let (e_out,e_recv) = channel();
+        e_out.send(perm[0])?;
+        e_out.send(0)?;
 
-        let (mut asp,a) = run_computer(&mut digits1,0,perm[0],0);
-        let (mut bsp,b) = run_computer(&mut digits2,0,perm[1],a.unwrap());
-        let (mut csp,c) = run_computer(&mut digits3,0,perm[2],b.unwrap());
-        let (mut dsp,d) = run_computer(&mut digits4,0,perm[3],c.unwrap());
-        let (mut esp,e) = run_computer(&mut digits5,0,perm[4],d.unwrap());
-        let mut e = e.unwrap();
+        thread::spawn( move || {
+            SuperComputer::new("A".to_string(),digits_a,a_out,e_recv).run();
+        });
+        thread::spawn( move || {
+            SuperComputer::new("B".to_string(),digits_b,b_out,a_recv).run();
+        });
+        thread::spawn( move || {
+            SuperComputer::new("C".to_string(),digits_c,c_out,b_recv).run();
+        });
+        thread::spawn( move || {
+            SuperComputer::new("D".to_string(),digits_d,d_out,c_recv).run();
+        });
+        thread::spawn( move || {
+            let mut e = SuperComputer::new("E".to_string(),digits_e,e_out,d_recv);
+            e.run();
+            let _ = result_send.send(e.last_output.unwrap());
+        });
 
         loop {
-            let (sp,a) = match run_computer(&mut digits1,asp,e,e) { (i,Some(n)) => (i,n), (_,None) => break};
-            asp = sp;
-            let (sp,b) = match run_computer(&mut digits2,bsp,a,a) { (i,Some(n)) => (i,n), (_,None) => break};
-            bsp = sp;
-            let (sp,c) = match run_computer(&mut digits3,csp,b,b) { (i,Some(n)) => (i,n), (_,None) => break};
-            csp = sp;
-            let (sp,d) = match run_computer(&mut digits4,dsp,c,c) { (i,Some(n)) => (i,n), (_,None) => break};
-            dsp = sp;
-            let (sp,temp_e) = match run_computer(&mut digits5,esp,d,d) { (i,Some(n)) => (i,n), (_,None) => break};
-            e = temp_e;
-            esp = sp;
+            match result_recv.recv() {
+                Ok(e) => if e > max{ max = e },
+                Err(_) => break
+            }
         }
-        if e > max { max = e;}
-
-
     }
+
     println!("max:{}",max);
 
+
+Ok(())
 }

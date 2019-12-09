@@ -1,7 +1,5 @@
-use std::collections::VecDeque;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::{Receiver, SendError, Sender};
-use std::thread;
 use utils::*;
 
 #[allow(dead_code)]
@@ -267,6 +265,5 @@ fn main() -> Result<(), SendError<i64>> {
             Err(_) => break,
         }
     }
-    println!("last output:{}", computer.last_output.unwrap());
     Ok(())
 }

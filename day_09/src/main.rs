@@ -1,6 +1,6 @@
+use std::fs;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::{Receiver, SendError, Sender};
-use utils::*;
 
 #[allow(dead_code)]
 struct SuperComputer {
@@ -69,7 +69,7 @@ impl SuperComputer {
         input_channel: Receiver<i64>,
     ) -> SuperComputer {
         // add ram
-        for _ in 0..digits.len() * 10 {
+        for _ in 0..digits.len() * 2 {
             digits.push(0);
         }
         SuperComputer {
@@ -245,8 +245,7 @@ fn to_num(digits: &[u8]) -> i64 {
 }
 
 fn main() -> Result<(), SendError<i64>> {
-    let digits: Vec<i64> = read_file("input.txt")
-        .nth(0)
+    let digits: Vec<i64> = fs::read_to_string("input.txt")
         .unwrap()
         .split(',')
         .map(|s| s.parse::<i64>().unwrap())
@@ -260,7 +259,7 @@ fn main() -> Result<(), SendError<i64>> {
     computer.run();
 
     loop {
-        match output_r.recv() {
+        match output_r.try_recv() {
             Ok(o) => println!("{}", o),
             Err(_) => break,
         }

@@ -1,7 +1,7 @@
+use std::collections::VecDeque;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::{Receiver, SendError, Sender};
 use std::thread;
-use std::collections::VecDeque;
 use utils::*;
 
 #[allow(dead_code)]
@@ -42,7 +42,7 @@ enum OpCode {
     LessThan,
     Equals,
     Halt,
-    RelativeBase
+    RelativeBase,
 }
 use OpCode::*;
 impl From<u8> for OpCode {
@@ -71,7 +71,7 @@ impl SuperComputer {
         input_channel: Receiver<i64>,
     ) -> SuperComputer {
         // add ram
-        for _ in 0 .. digits.len()*10 {
+        for _ in 0..digits.len() * 10 {
             digits.push(0);
         }
         SuperComputer {
@@ -110,8 +110,7 @@ impl SuperComputer {
             }
 
             let num_params = match op_code {
-                Add | Mul | LessThan | Equals |
-                JumpIfTrue | JumpIfFalse => 2,
+                Add | Mul | LessThan | Equals | JumpIfTrue | JumpIfFalse => 2,
                 Input | Output | RelativeBase => 1,
                 Halt => 0,
             };
@@ -121,7 +120,7 @@ impl SuperComputer {
                 let value = self.digits[self.sp + i + 1];
                 match param_modes[i] {
                     Pointer => input_params.push(self.digits[value as usize]),
-                    Relative => input_params.push(self.digits[(self.rb+value) as usize]),
+                    Relative => input_params.push(self.digits[(self.rb + value) as usize]),
                     Value => input_params.push(value),
                 }
             }
@@ -132,19 +131,28 @@ impl SuperComputer {
                     break;
                 }
                 Add => {
-                    let offset = match param_modes[2] { Relative => self.rb, _ => 0 };
+                    let offset = match param_modes[2] {
+                        Relative => self.rb,
+                        _ => 0,
+                    };
                     let write_address = (self.digits[self.sp + 3] + offset) as usize;
                     self.digits[write_address] = input_params[0] + input_params[1];
                     self.sp += 4;
                 }
                 Mul => {
-                    let offset = match param_modes[2] { Relative => self.rb, _ => 0 };
+                    let offset = match param_modes[2] {
+                        Relative => self.rb,
+                        _ => 0,
+                    };
                     let write_address = (self.digits[self.sp + 3] + offset) as usize;
                     self.digits[write_address] = input_params[0] * input_params[1];
                     self.sp += 4;
                 }
                 Input => {
-                    let offset = match param_modes[0] { Relative => self.rb, _ => 0 };
+                    let offset = match param_modes[0] {
+                        Relative => self.rb,
+                        _ => 0,
+                    };
                     let write_address = (self.digits[self.sp + 1] + offset) as usize;
                     match self.input_channel.recv() {
                         Ok(input) => {
@@ -183,7 +191,10 @@ impl SuperComputer {
                     }
                 }
                 LessThan => {
-                    let offset = match param_modes[2] { Relative => self.rb, _ => 0 };
+                    let offset = match param_modes[2] {
+                        Relative => self.rb,
+                        _ => 0,
+                    };
                     let write_address = (self.digits[self.sp + 3] + offset) as usize;
                     self.digits[write_address] = if input_params[0] < input_params[1] {
                         1
@@ -193,7 +204,10 @@ impl SuperComputer {
                     self.sp += 4;
                 }
                 Equals => {
-                    let offset = match param_modes[2] { Relative => self.rb, _ => 0 };
+                    let offset = match param_modes[2] {
+                        Relative => self.rb,
+                        _ => 0,
+                    };
                     let write_address = (self.digits[self.sp + 3] + offset) as usize;
                     self.digits[write_address] = if input_params[0] == input_params[1] {
                         1
@@ -232,8 +246,6 @@ fn to_num(digits: &[u8]) -> i64 {
     num
 }
 
-
-
 fn main() -> Result<(), SendError<i64>> {
     let digits: Vec<i64> = read_file("input.txt")
         .nth(0)
@@ -251,10 +263,10 @@ fn main() -> Result<(), SendError<i64>> {
 
     loop {
         match output_r.recv() {
-            Ok(o) => println!("{}",o),
+            Ok(o) => println!("{}", o),
             Err(_) => break,
         }
     }
-    println!("last output:{}",computer.last_output.unwrap());
+    println!("last output:{}", computer.last_output.unwrap());
     Ok(())
 }

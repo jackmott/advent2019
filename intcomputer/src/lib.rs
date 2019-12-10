@@ -4,6 +4,7 @@ use std::sync::mpsc::{Receiver, Sender};
 pub struct SuperComputer {
     pub name: String,
     pub digits: Vec<i64>,
+    original_digits:Vec<i64>,
     sp: usize,
     rb: i64,
     output_channel: Sender<i64>,
@@ -11,7 +12,7 @@ pub struct SuperComputer {
     pub last_output: Option<i64>,
 }
 use ParameterMode::*;
-#[derive(Debug)]
+#[derive(Debug,Copy,Clone)]
 enum ParameterMode {
     Value,
     Pointer,
@@ -27,6 +28,7 @@ impl From<u8> for ParameterMode {
         }
     }
 }
+
 #[derive(Debug)]
 enum OpCode {
     Add,
@@ -67,18 +69,24 @@ impl SuperComputer {
         input_channel: Receiver<i64>,
     ) -> SuperComputer {
         // add ram
-        for _ in 0..digits.len() * 2 {
-            digits.push(0);
-        }
+        digits.resize(digits.len()*4,0);
+        let original_digits = digits.clone();
         SuperComputer {
             name,
             digits,
+            original_digits,
             sp: 0,
             rb: 0,
             output_channel,
             input_channel,
             last_output: None,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.sp = 0;
+        self.rb = 0;
+        self.digits = self.original_digits.clone();
     }
 
     pub fn run(&mut self) {
@@ -115,29 +123,17 @@ impl SuperComputer {
                     break;
                 }
                 Add => {
-                    let offset = match param_modes[2] {
-                        Relative => self.rb,
-                        _ => 0,
-                    };
-                    let write_address = (self.digits[self.sp + 3] + offset) as usize;
+                    let write_address = (self.digits[self.sp + 3] + self.get_offset(param_modes[2])) as usize;
                     self.digits[write_address] = input_params[0] + input_params[1];
                     self.sp += 4;
                 }
                 Mul => {
-                    let offset = match param_modes[2] {
-                        Relative => self.rb,
-                        _ => 0,
-                    };
-                    let write_address = (self.digits[self.sp + 3] + offset) as usize;
+                    let write_address = (self.digits[self.sp + 3] + self.get_offset(param_modes[2])) as usize;
                     self.digits[write_address] = input_params[0] * input_params[1];
                     self.sp += 4;
                 }
                 Input => {
-                    let offset = match param_modes[0] {
-                        Relative => self.rb,
-                        _ => 0,
-                    };
-                    let write_address = (self.digits[self.sp + 1] + offset) as usize;
+                    let write_address = (self.digits[self.sp + 1] + self.get_offset(param_modes[0])) as usize;
                     match self.input_channel.recv() {
                         Ok(input) => {
                             self.digits[write_address] = input;
@@ -175,11 +171,7 @@ impl SuperComputer {
                     }
                 }
                 LessThan => {
-                    let offset = match param_modes[2] {
-                        Relative => self.rb,
-                        _ => 0,
-                    };
-                    let write_address = (self.digits[self.sp + 3] + offset) as usize;
+                    let write_address = (self.digits[self.sp + 3] + self.get_offset(param_modes[2])) as usize;
                     self.digits[write_address] = if input_params[0] < input_params[1] {
                         1
                     } else {
@@ -188,11 +180,7 @@ impl SuperComputer {
                     self.sp += 4;
                 }
                 Equals => {
-                    let offset = match param_modes[2] {
-                        Relative => self.rb,
-                        _ => 0,
-                    };
-                    let write_address = (self.digits[self.sp + 3] + offset) as usize;
+                    let write_address = (self.digits[self.sp + 3] + self.get_offset(param_modes[2])) as usize;
                     self.digits[write_address] = if input_params[0] == input_params[1] {
                         1
                     } else {
@@ -205,6 +193,13 @@ impl SuperComputer {
                     self.sp += 2;
                 }
             }
+        }
+    }
+
+    fn get_offset(&self, mode: ParameterMode) -> i64 {
+        match mode {
+            Relative => self.rb,
+            _ => 0,
         }
     }
 }

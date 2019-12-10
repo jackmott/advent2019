@@ -1,86 +1,82 @@
 use std::ops;
 
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Vector2 {
-    pub x:f64,
-    pub y:f64,
+    pub x: f64,
+    pub y: f64,
 }
 impl Vector2 {
-    pub fn from_index(i:usize,w:usize) -> Vector2 {
-        Vector2 { x: (i % w) as f64, y: (i / w) as f64 }
+    pub fn from_index(i: usize, w: usize) -> Vector2 {
+        Vector2 {
+            x: (i % w) as f64,
+            y: (i / w) as f64,
+        }
     }
 
-    pub fn new (x:f64,y:f64) -> Vector2 {
-        Vector2 {
-            x,
-            y,
-        }
+    pub fn new(x: f64, y: f64) -> Vector2 {
+        Vector2 { x, y }
     }
 
     pub fn normalize(&self) -> Vector2 {
-        let mag = (self.x*self.x+self.y*self.y).sqrt();
+        let mag = (self.x * self.x + self.y * self.y).sqrt();
         Vector2 {
-            x: self.x/mag,
-            y: self.y/mag,
+            x: self.x / mag,
+            y: self.y / mag,
         }
     }
 
-    pub fn cross(&self,v:Vector2) -> f64 {
-        self.x*v.y - v.x*self.y
+    pub fn cross(&self, v: Vector2) -> f64 {
+        self.x * v.y - v.x * self.y
     }
 
-    pub fn dot(&self,v:Vector2) -> f64 {
-        self.x*v.x + self.y*v.y
+    pub fn dot(&self, v: Vector2) -> f64 {
+        self.x * v.x + self.y * v.y
     }
 
-    pub fn dist_squared(&self,v:Vector2) -> f64 {
+    pub fn dist_squared(&self, v: Vector2) -> f64 {
         (v.x - self.x) * (v.x - self.x) + (v.y - self.y) * (v.y - self.y)
     }
 
-    pub fn dist(&self,v:Vector2) -> f64 {
+    pub fn dist(&self, v: Vector2) -> f64 {
         self.dist_squared(v).sqrt()
     }
 
-    pub fn angle_from_vertical(&self,p:Vector2) -> f64 {
+    pub fn angle_from_vertical(&self, p: Vector2) -> f64 {
         let v = (p - *self).normalize();
         let r = v.y.atan2(v.x) - (-1.0 as f64).atan2(0.0);
         let r = r.to_degrees();
-        (r+360.0) % 360.0
-
-/*
-        let above_v1 = *self + Vector2 { x:0.0,y:-10.0 };
-        let v1 = (above_v1 - *self).normalize();
-        let v2 = (p - *self).normalize();
-        let dot = v1.dot(v2);
-        let cross = v1.cross(v2);
-        let r = cross.atan2(dot).to_degrees();*/
-
-
-
+        (r + 360.0) % 360.0
     }
-
-
 }
 impl ops::Add<Vector2> for Vector2 {
     type Output = Vector2;
 
-    fn add(self,rhs:Vector2) -> Vector2 {
-        Vector2 { x: self.x+rhs.x, y: self.y+rhs.y }
+    fn add(self, rhs: Vector2) -> Vector2 {
+        Vector2 {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
     }
 }
 
 impl ops::Sub<Vector2> for Vector2 {
     type Output = Vector2;
 
-    fn sub(self,rhs:Vector2) -> Vector2 {
-        Vector2 { x: self.x-rhs.x, y: self.y-rhs.y }
+    fn sub(self, rhs: Vector2) -> Vector2 {
+        Vector2 {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
     }
 }
 
 impl ops::Mul<f64> for Vector2 {
     type Output = Vector2;
 
-    fn mul(self,rhs:f64) -> Vector2 {
-        Vector2 { x: self.x*rhs, y: self.y*rhs }
+    fn mul(self, rhs: f64) -> Vector2 {
+        Vector2 {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
     }
 }

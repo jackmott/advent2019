@@ -60,12 +60,10 @@ impl<'a> Iterator for Digits<'a> {
                 }
                 drop(digits);
                 return Some(Ref::map(self.digits.borrow(), Vec::as_slice));
+            } else if i == 0 {
+                break;
             } else {
-                if i == 0 {
-                    break;
-                } else {
-                    i -= 1;
-                }
+                i -= 1;
             }
         }
         None

@@ -1,9 +1,31 @@
 use intcomputer::*;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fs;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::SendError;
 use std::thread;
+
+use PaintColor::*;
+#[derive(Copy,Debug,Clone)]
+enum PaintColor {
+    Black,
+    White,
+}
+impl PaintColor {
+    fn from_int(i:i64) -> PaintColor{
+        match i {
+            0 => Black,
+            1 => White,
+            _ => panic!("color not supported"),
+        }
+    }
+    fn to_int(&self) -> i64 {
+        match self {
+            Black => 0,
+            White => 1,
+        }
+    }
+}
 
 use Dir::*;
 enum Dir {
@@ -13,50 +35,38 @@ enum Dir {
     Right,
 }
 
+#[derive(PartialEq, Eq, Hash,Copy,Debug,Clone)]
 struct Pos {
-    x: usize,
-    y: usize,
+    x: i64,
+    y: i64,
 }
-impl Pos {
-    fn from_index(index: usize, w: usize) -> Pos {
-        Pos {
-            x: index % w,
-            y: index / w,
-        }
-    }
 
-    fn to_index(&self, w: usize) -> usize {
-        self.y * w + self.x
-    }
-}
 struct Robot {
-    hull_width: usize,
     pos: Pos,
-    hull: Vec<i64>,
     dir: Dir,
-    paint_log: HashSet<usize>,
+    // By using a hashmap here, we don't have to know the bounds of the hull
+    // or allocate extra memory
+    // and it simplifies getting the count of painted pieces
+    paint_map: HashMap<Pos,PaintColor>,
 }
 impl Robot {
-    fn new(start_color: i64, w: usize, h: usize) -> Robot {
+    fn new(start_color: PaintColor) -> Robot {
         let mut robot = Robot {
-            hull_width: w,
-            pos: Pos { x: w / 2, y: h / 2 },
-            hull: vec![0; w * h],
+            pos: Pos { x: 0, y: 0 },
             dir: Up,
-            paint_log: HashSet::new(),
+            paint_map: HashMap::new(),
         };
-        let index = robot.pos.to_index(w);
-        robot.hull[index] = start_color;
+        robot.paint_map.insert(robot.pos,start_color);
         robot
     }
-    fn get_current_color(&self) -> i64 {
-        let index = self.pos.to_index(self.hull_width);
-        self.hull[index]
+    fn get_current_color(&self) -> PaintColor {
+        match self.paint_map.get(&self.pos) {
+            Some(color) => *color,
+            None => Black
+        }
     }
-    fn paint(&mut self, color: i64) {
-        let index = self.pos.to_index(self.hull_width);
-        self.paint_log.insert(index);
-        self.hull[index] = color;
+    fn paint(&mut self, color: PaintColor) {
+        self.paint_map.insert(self.pos,color);
     }
     fn turn(&mut self, d: i64) {
         let new_dir = match self.dir {
@@ -122,9 +132,7 @@ fn main() -> Result<(), SendError<i64>> {
         .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
-    let w = 200;
-    let h = 200;
-    let mut robot = Robot::new(1, w, h);
+    let mut robot = Robot::new(White);
     // PART 1
     let (robot_output, computer_input) = channel();
     let (computer_output, robot_input) = channel();
@@ -140,13 +148,13 @@ fn main() -> Result<(), SendError<i64>> {
     });
 
     loop {
-        match robot_output.send(robot.get_current_color()) {
+        match robot_output.send(robot.get_current_color().to_int()) {
             Ok(_) => (),
             Err(_) => break,
         }
 
         let color_to_paint = match robot_input.recv() {
-            Ok(color) => color,
+            Ok(color) => PaintColor::from_int(color),
             Err(_) => break,
         };
 
@@ -158,16 +166,23 @@ fn main() -> Result<(), SendError<i64>> {
         };
         robot.next();
     }
-    println!("{}", robot.paint_log.len());
+    println!("{}", robot.paint_map.len());
 
-    // Part 2
-    for y in 0..h {
-        for x in 0..w {
-            let pos = Pos { x, y };
-            match robot.hull[pos.to_index(w)] {
-                1 => print!("#"),
-                0 => print!(" "),
-                _ => panic!("err"),
+    // HashMap simplifies a lot of things but complicates printing the image
+    let min_x = robot.paint_map.keys().min_by_key(|pos| pos.x).unwrap().x;
+    let max_x = robot.paint_map.keys().max_by_key(|pos| pos.x).unwrap().x;
+    let min_y = robot.paint_map.keys().min_by_key(|pos| pos.y).unwrap().y;
+    let max_y = robot.paint_map.keys().max_by_key(|pos| pos.y).unwrap().y;
+    for y in min_y .. max_y+1 {
+        for x in min_x .. max_x+1 {
+            let color =
+                match robot.paint_map.get(&Pos { x: x, y: y}) {
+                    Some(color) => *color,
+                    None => Black,
+                };
+            match color {
+                Black => print!(" "),
+                White => print!("#"),
             }
         }
         println!("");

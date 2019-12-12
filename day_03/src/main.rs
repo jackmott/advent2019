@@ -3,17 +3,15 @@ use utils::*;
 
 fn main() {
     let mut file = read_file("input.txt");
-    let line1 = file.nth(0).unwrap();
-    let l1 = line1.split(',').map(|s| s.chars());
-    let line2 = file.nth(0).unwrap();
-    let l2 = line2.split(',').map(|s| s.chars());
+    let l1 = file.nth(0).unwrap();
+    let l1 = l1.split(',').map(|s| s.chars());
+    let l2 = file.nth(0).unwrap();
+    let l2 = l2.split(',').map(|s| s.chars());
 
     let mut l1_points_hash = HashSet::new();
-    let mut l1_points = Vec::new();
-    let mut l2_points = Vec::new();
     let mut x: i32 = 0;
     let mut y: i32 = 0;
-    l1_points.push((x, y));
+    let mut l1_points = vec![(x, y)];
     for mut line in l1 {
         let dir = line.next().unwrap();
         let number = line.as_str().parse::<i32>().unwrap();
@@ -35,6 +33,7 @@ fn main() {
     let mut min_dist = std::i32::MAX;
     x = 0;
     y = 0;
+    let mut l2_points = vec![(x, y)];
     l2_points.push((x, y));
     for mut line in l2 {
         let dir = line.next().unwrap();

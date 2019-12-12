@@ -75,11 +75,9 @@ fn main() {
     let input = read_file("input.txt");
 
     let mut asteroid_map = Vec::new();
-    let mut h: usize = 0;
     let mut w: usize = 0;
     for line in input {
         w = line.len();
-        h += 1;
         for c in line.chars() {
             asteroid_map.push(match c {
                 '.' => false,

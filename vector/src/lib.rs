@@ -1,5 +1,68 @@
 use std::ops;
 
+#[derive(Hash,PartialEq,Eq,Debug, Copy, Clone)]
+pub struct Vector3 {
+    pub x: i64,
+    pub y: i64,
+    pub z: i64,
+}
+
+impl Vector3 {
+
+    pub fn cross(&self, v: Vector3) -> Vector3 {
+        let x = self.y*v.z - v.y*self.z;
+        let y = -(self.x*v.z - v.x*self.z);
+        let z = self.x*v.y - v.x*self.y;
+        Vector3 { x,y,z }
+    }
+
+    pub fn dot(&self, v: Vector3) -> i64 {
+        self.x * v.x + self.y * v.y + self.z*v.z
+    }
+
+    pub fn dist_squared(&self, v: Vector3) -> i64 {
+        (v.x - self.x) * (v.x - self.x) + (v.y - self.y) * (v.y - self.y) + (v.z-self.z) * (v.z-self.z)
+    }
+
+}
+
+impl ops::Add<Vector3> for Vector3 {
+    type Output = Vector3;
+
+    fn add(self, rhs: Vector3) -> Vector3 {
+        Vector3 {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+impl ops::Sub<Vector3> for Vector3 {
+    type Output = Vector3;
+
+    fn sub(self, rhs: Vector3) -> Vector3 {
+        Vector3 {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl ops::Mul<i64> for Vector3 {
+    type Output = Vector3;
+
+    fn mul(self, rhs: i64) -> Vector3 {
+        Vector3 {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+        }
+    }
+}
+
+
 #[derive(Debug, Copy, Clone)]
 pub struct Vector2 {
     pub x: f64,

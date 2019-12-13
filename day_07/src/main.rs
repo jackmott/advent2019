@@ -38,49 +38,84 @@ fn main() -> Result<(), SendError<i64>> {
 
     // Phase Settings
     let nums: Vec<i64> = vec![0, 1, 2, 3, 4];
-    let perms = perm(nums);
+    let (a_cmd_send,a_cmd_recv) = channel();
+    let (b_cmd_send,b_cmd_recv) = channel();
+    let (c_cmd_send,c_cmd_recv) = channel();
+    let (d_cmd_send,d_cmd_recv) = channel();
+    let (e_cmd_send,e_cmd_recv) = channel();
+    let (start,a_input_recv) = channel();
+    let (a_output_send,b_input_recv) = channel();
+    let (b_output_send,c_input_recv) = channel();
+    let (c_output_send,d_input_recv) = channel();
+    let (d_output_send,e_input_recv) = channel();
+    let (e_output_send,end) = channel();
 
+    let a_input = start.clone();
+    let b_input = a_output_send.clone();
+    let c_input = b_output_send.clone();
+    let d_input = c_output_send.clone();
+    let e_input = d_output_send.clone();
+
+
+
+    let a_digits = digits.clone();
+    thread::spawn(move || {
+        SuperComputer::new_command("A".to_string(), a_digits, a_output_send, a_input_recv,Some(a_cmd_recv)).run();
+    });
+
+    let b_digits = digits.clone();
+    thread::spawn(move || {
+        SuperComputer::new_command("B".to_string(), b_digits, b_output_send, b_input_recv,Some(b_cmd_recv)).run();
+    });
+
+    let c_digits = digits.clone();
+    thread::spawn(move || {
+        SuperComputer::new_command("C".to_string(), c_digits, c_output_send, c_input_recv,Some(c_cmd_recv)).run();
+    });
+
+    let d_digits = digits.clone();
+    thread::spawn(move || {
+        SuperComputer::new_command("D".to_string(), d_digits, d_output_send, d_input_recv,Some(d_cmd_recv)).run();
+    });
+
+    let e_digits = digits.clone();
+    thread::spawn(move || {
+        SuperComputer::new_command("E".to_string(), e_digits, e_output_send, e_input_recv,Some(e_cmd_recv)).run();
+    });
+
+
+
+
+    let perms = perm(nums);
     let mut max = -999999;
     // For each permutation of phase settings
     for perm in perms {
-        // Start off the computation with perm[0] and 0 as inputs
-        let (a_send, a_in) = channel();
-        a_send.send(perm[0])?;
-        a_send.send(0)?;
 
-        // Build up input and output channels for each Amplifier
-        let mut out_channels = VecDeque::<Sender<i64>>::new();
-        let mut recv_channels = VecDeque::<Receiver<i64>>::new();
-        recv_channels.push_back(a_in);
-        for _ in 0..perm.len() {
-            let (out, recv) = channel();
-            out_channels.push_back(out);
-            recv_channels.push_back(recv);
-        }
-        // Spawn a thread for each amplifier
-        for i in 0..perm.len() {
-            let out = out_channels.pop_front().unwrap();
-            // Send the phase setting into the input of the NEXT machine
-            if i + 1 < perm.len() {
-                out.send(perm[i + 1])?;
-            }
-            // Set the input channel to the receiver of the PREVIOUS machine's output
-            let recv = recv_channels.pop_front().unwrap();
-            let digits_clone = digits.clone();
-            // Spawn a thread and run the computer
-            thread::spawn(move || {
-                SuperComputer::new(i.to_string(), digits_clone, out, recv).run();
-            });
-        }
+        e_input.send(perm[4])?;
+        d_input.send(perm[3])?;
+        c_input.send(perm[2])?;
+        b_input.send(perm[1])?;
+        // Start off the computation with perm[0] and 0 as inputs
+        a_input.send(perm[0])?;
+        a_input.send(0)?;
+
+
+
         // Get the output from the last am,plifier
-        match recv_channels.pop_back().unwrap().recv() {
+        match end.recv() {
             Ok(last_amplifier_output) => {
                 if last_amplifier_output > max {
                     max = last_amplifier_output;
                 }
             }
-            Err(_) => panic!("we broke"),
+            Err(err) => panic!("we broke {:?}",err),
         }
+        a_cmd_send.send(Command::Reset(digits.clone())).unwrap();
+        b_cmd_send.send(Command::Reset(digits.clone())).unwrap();
+        c_cmd_send.send(Command::Reset(digits.clone())).unwrap();
+        d_cmd_send.send(Command::Reset(digits.clone())).unwrap();
+        e_cmd_send.send(Command::Reset(digits.clone())).unwrap();
+
     }
     println!("max:{}", max);
 

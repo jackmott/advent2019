@@ -13,7 +13,7 @@ fn main() -> Result<(), SendError<i64>> {
     // PART 1
     let (input_s, input_r) = channel();
     let (output_s, output_r) = channel();
-    input_s.send(2)?;
+    input_s.send(1)?;
     let mut computer = SuperComputer::new("Computer".to_string(), digits, output_s, input_r);
     computer.run();
 

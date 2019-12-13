@@ -16,7 +16,7 @@ fn main() {
         SuperComputer::new("Computer".to_string(), digits, output_s, input_r).run();
     });
 
-    let _ = input_s.send(5);
+    let _ = input_s.send(1);
     loop {
         match output_r.recv() {
             Ok(output) => println!("output:{}", output),

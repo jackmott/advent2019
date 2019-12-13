@@ -1,16 +1,25 @@
 use std::sync::mpsc::{Receiver, Sender};
 
+
+
 #[allow(dead_code)]
 pub struct SuperComputer {
     pub name: String,
     pub digits: Vec<i64>,
-    original_digits:Vec<i64>,
     sp: usize,
     rb: i64,
     output_channel: Sender<i64>,
     input_channel: Receiver<i64>,
+    command_channel: Option<Receiver<Command>>,
     pub last_output: Option<i64>,
 }
+
+use Command::*;
+pub enum Command {
+    Reset(Vec<i64>),
+    Quit,
+}
+
 use ParameterMode::*;
 #[derive(Debug,Copy,Clone)]
 enum ParameterMode {
@@ -61,32 +70,36 @@ impl From<i64> for OpCode {
     }
 }
 
+
 impl SuperComputer {
     pub fn new(
+        name: String,
+        digits: Vec<i64>,
+        output_channel: Sender<i64>,
+        input_channel: Receiver<i64>,
+    ) -> SuperComputer {
+        SuperComputer::new_command(name,digits,output_channel,input_channel,None)
+    }
+
+    pub fn new_command(
         name: String,
         mut digits: Vec<i64>,
         output_channel: Sender<i64>,
         input_channel: Receiver<i64>,
+        command_channel: Option<Receiver<Command>>,
     ) -> SuperComputer {
         // add ram
-        digits.resize(digits.len()*4,0);
-        let original_digits = digits.clone();
+        digits.resize(digits.len()*10,0);
         SuperComputer {
             name,
             digits,
-            original_digits,
             sp: 0,
             rb: 0,
             output_channel,
             input_channel,
             last_output: None,
+            command_channel: command_channel
         }
-    }
-
-    pub fn reset(&mut self) {
-        self.sp = 0;
-        self.rb = 0;
-        self.digits = self.original_digits.clone();
     }
 
     pub fn run(&mut self) {
@@ -119,8 +132,24 @@ impl SuperComputer {
 
             match op_code {
                 Halt => {
-                    //println!("{} Halting",self.name);
-                    break;
+                    if let Some(command_channel) = &self.command_channel {
+                        match command_channel.recv() {
+                            Ok(command) => {
+                                match command {
+                                    Reset(digits) => {
+                                        self.sp = 0;
+                                        self.rb = 0;
+                                        self.digits = digits.clone();
+                                    }
+                                    Quit => break
+                                }
+                            }
+                            Err(_) => break
+                        }
+                    }
+                    else {
+                        break;
+                    }
                 }
                 Add => {
                     let write_address = (self.digits[self.sp + 3] + self.get_offset(param_modes[2])) as usize;
@@ -147,6 +176,7 @@ impl SuperComputer {
                 }
                 Output => match self.output_channel.send(input_params[0]) {
                     Ok(_) => {
+                        //println!("Computer {} sent: {}",self.name,input_params[0]);
                         self.last_output = Some(input_params[0]);
                         self.sp += 2;
                     }

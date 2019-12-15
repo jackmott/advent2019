@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::SendError;
-use std::sync::mpsc::TryRecvError;
 use std::thread;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -33,15 +32,6 @@ impl Tile {
         }
     }
 
-    fn to_string(&self) -> &str {
-        match self {
-            Empty => " ",
-            Wall => "#",
-            Block => "B",
-            HorizontalPaddle => "_",
-            Ball => "*",
-        }
-    }
 }
 
 fn main() -> Result<(), SendError<i64>> {
@@ -63,19 +53,15 @@ fn main() -> Result<(), SendError<i64>> {
     });
 
     let mut tiles = HashMap::new();
-    let mut score = 0;
     let mut paddle_pos = Pos { x: 0, y: 0 };
-    let mut ball_pos = Pos { x: 0, y: 0 };
-
     loop {
         let x = match game_input.recv() {
             Ok(x) => x, // x
-            Err(err) => break,
+            Err(_) => break,
         };
         let y = match game_input.recv() {
             Ok(y) => y, // y
-            Err(err) => {
-                println!("err on y:{}", err);
+            Err(_) => {
                 break;
             }
         };
@@ -84,34 +70,32 @@ fn main() -> Result<(), SendError<i64>> {
             Ok(input) => {
                 if x != -1 {
                     let tile = Tile::from_int(input);
-                    println!("{:?}", tile);
+                    //println!("{:?}", tile);
                     if tile == Ball {
-                        ball_pos = pos;
-                        println!("ball:{:?}", ball_pos);
-                        let output = if paddle_pos.x < ball_pos.x {
+                       // println!("ball:{:?}", pos);
+                        let output = if paddle_pos.x < pos.x {
                             1
-                        } else if paddle_pos.x > ball_pos.x {
+                        } else if paddle_pos.x > pos.x {
                             -1
                         } else {
                             0
                         };
                         //paddle_pos.x += output;
-                        println!("sending output{}", output);
+                       // println!("sending output{}", output);
                         match game_output.send(output) {
                             Ok(_) => continue,
-                            Err(err) => {
+                            Err(_) => {
                                 // println!("err:{}",err);
                                 break;
                             }
                         }
                     } else if tile == HorizontalPaddle {
                         paddle_pos = pos;
-                        println!("padl:{:?}", paddle_pos);
+                       // println!("padl:{:?}", paddle_pos);
                     }
                     tiles.insert(Pos { x, y }, tile);
                 } else {
-                    score = input;
-                    println!("score:{}", score);
+                    println!("score:{}", input);
 
                 }
             }
@@ -121,6 +105,7 @@ fn main() -> Result<(), SendError<i64>> {
             }
         }
     }
+    // Part1
     println!("{}", tiles.values().filter(|tile| **tile == Block).count());
     Ok(())
 }

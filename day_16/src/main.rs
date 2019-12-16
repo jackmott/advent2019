@@ -37,26 +37,30 @@ fn part1() {
         sum_b = !sum_b;
     }
     if !sum_b {
-        println!("digits:{:?}", digits);
+        println!("part1:{:?}", &digits[0..8]);
     } else {
-        println!("digits:{:?}", digits_b);
+        println!("part1:{:?}", &digits_b[0..8]);
     }
 }
 
 fn part2() {
-    let original_digits: Vec<i64> = fs::read_to_string("input.txt")
-        .unwrap()
-        .chars()
+    let input_chars: Vec<char> = fs::read_to_string("input.txt").unwrap().chars().collect();
+
+    let offset = input_chars
+        .iter()
+        .take(7)
+        .collect::<String>()
+        .parse::<usize>()
+        .unwrap();
+
+    let mut digits: Vec<i64> = input_chars
+        .iter()
         .map(|c| c.to_string().parse::<i64>().unwrap())
+        .cycle()
+        .skip(offset)
+        .take(10000 * input_chars.len() - offset) //slightly faster to skip then take, than vice versa
         .collect();
 
-    let mut expanded_digits = Vec::new();
-    for i in 0..10000 * original_digits.len() {
-        expanded_digits.push(original_digits[i % original_digits.len()]);
-    }
-
-    let offset = 5977567;
-    let digits = &mut expanded_digits[offset..];
     // This pattern only works on the 2nd half of the array
     // But lo and behold, the offset is in the 2nd half
     for _ in 0..100 {
@@ -65,7 +69,7 @@ fn part2() {
         }
     }
 
-    println!("{:?}", &digits[0..8]);
+    println!("part2:{:?}", &digits[0..8]);
 }
 
 fn main() {

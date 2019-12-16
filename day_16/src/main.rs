@@ -9,35 +9,20 @@ fn part1() {
         .collect();
 
     let base_pattern = vec![0, 1, 0, -1];
-    let mut digits_b = digits.clone();
-    let mut sum_b = false; //so I can swap vecs rather than make a new one each time
     for _ in 0..100 {
         for i in 0..digits.len() - 1 {
-            let mut sum = 0;
-            //minor optimization, start at i because it zeros out
-            for j in i..digits.len() {
-                let pattern_digit = base_pattern[((j + 1) / (i + 1)) % 4];
-
-                if sum_b {
-                    sum += digits_b[j] * pattern_digit;
-                } else {
-                    sum += digits[j] * pattern_digit;
-                }
-            }
-            sum = sum.abs()%10;
-            if sum_b {
-                digits[i] = sum;
-            } else {
-                digits_b[i] = sum;
-            }
+            digits[i] = digits
+                .iter()
+                .enumerate()
+                .skip(i) //optimization, since all will be * 0
+                .map(|(j, d)| d * base_pattern[((j + 1) / (i + 1)) % 4])
+                .sum::<i64>()
+                .abs()
+                % 10;
         }
-        sum_b = !sum_b;
     }
-    if !sum_b {
-        println!("part1:{:?}", &digits[0..8]);
-    } else {
-        println!("part1:{:?}", &digits_b[0..8]);
-    }
+
+    println!("part1:{:?}", &digits[0..8]);
 }
 
 fn part2() {

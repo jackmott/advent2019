@@ -31,7 +31,6 @@ impl Tile {
             _ => panic!("invalid tile:{}", i),
         }
     }
-
 }
 
 fn main() -> Result<(), SendError<i64>> {
@@ -70,9 +69,7 @@ fn main() -> Result<(), SendError<i64>> {
             Ok(input) => {
                 if x != -1 {
                     let tile = Tile::from_int(input);
-                    //println!("{:?}", tile);
                     if tile == Ball {
-                       // println!("ball:{:?}", pos);
                         let output = if paddle_pos.x < pos.x {
                             1
                         } else if paddle_pos.x > pos.x {
@@ -80,23 +77,18 @@ fn main() -> Result<(), SendError<i64>> {
                         } else {
                             0
                         };
-                        //paddle_pos.x += output;
-                       // println!("sending output{}", output);
                         match game_output.send(output) {
                             Ok(_) => continue,
                             Err(_) => {
-                                // println!("err:{}",err);
                                 break;
                             }
                         }
                     } else if tile == HorizontalPaddle {
                         paddle_pos = pos;
-                       // println!("padl:{:?}", paddle_pos);
                     }
                     tiles.insert(Pos { x, y }, tile);
                 } else {
                     println!("score:{}", input);
-
                 }
             }
             Err(err) => {

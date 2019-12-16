@@ -1,5 +1,4 @@
 use std::fs;
-use utils::*;
 
 fn part1() {
     let mut digits: Vec<i64> = fs::read_to_string("input.txt")

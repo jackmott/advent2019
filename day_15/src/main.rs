@@ -168,14 +168,12 @@ fn astar(start: Pos, goal: Pos, nodes: &HashMap<Pos, Node>) -> usize {
     let mut cost_so_far = HashMap::new();
     cost_so_far.insert(start, 0);
 
-    while frontier.len() > 0 {
-        let (current, _) = frontier.pop().unwrap();
+    while let Some((mut current, _)) = frontier.pop() {
         if current == goal {
             let mut count = 0;
-            let mut n = current;
-            while n != start {
+            while current != start {
                 count += 1;
-                n = came_from[&n];
+                current = came_from[&current];
             }
             return count;
         } else {
@@ -216,7 +214,7 @@ fn imbue_precious_oxygen(nodes: &mut HashMap<Pos, Node>) -> usize {
                         Some(pos) => {
                             let mut neighbor = nodes[&pos];
                             neighbor.is_oxygen = true;
-                            nodes.insert(pos, neighbor);
+                            nodes.insert(neighbor.pos, neighbor);
                         }
                         None => (),
                     }

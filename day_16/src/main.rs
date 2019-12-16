@@ -24,10 +24,7 @@ fn part1() {
                     sum += digits[j] * pattern_digit;
                 }
             }
-            sum = sum.abs();
-            if sum >= 10 {
-                sum = sum % 10;
-            }
+            sum = sum.abs()%10;
             if sum_b {
                 digits[i] = sum;
             } else {

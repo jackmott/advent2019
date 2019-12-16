@@ -12,7 +12,6 @@ const SOUTH: i64 = 2;
 const WEST: i64 = 3;
 const EAST: i64 = 4;
 
-const WALL: i64 = 0;
 const MOVED: i64 = 1;
 const OXYGEN: i64 = 2;
 
@@ -91,6 +90,7 @@ impl Node {
     }
 }
 
+// Checks each direction around a node, then DFS it with backtracking
 fn check_direction(
     dir: i64,
     node: &mut Node,
@@ -100,6 +100,7 @@ fn check_direction(
 ) {
     // position of node we are going to check
     let pos = node.pos.next_pos(dir);
+    // get the opposite dir so we can backtrack
     let opposite_dir = opposite_dir(dir);
     match nodes.get(&pos) {
         None => {
@@ -158,6 +159,7 @@ fn explore_nodes(
     check_direction(WEST, node, output, input, nodes);
 }
 
+// astar search to find shortest path to SWEET OXYGEN
 fn astar(start: Pos, goal: Pos, nodes: &HashMap<Pos, Node>) -> usize {
     let mut frontier = PriorityQueue::new();
     frontier.push(start, 1);
@@ -199,6 +201,7 @@ fn astar(start: Pos, goal: Pos, nodes: &HashMap<Pos, Node>) -> usize {
     0
 }
 
+// This is basically an inefficient BFS
 fn imbue_precious_oxygen(nodes: &mut HashMap<Pos, Node>) -> usize {
     let mut count = 0;
     loop {
@@ -233,7 +236,6 @@ fn main() -> Result<(), SendError<i64>> {
         .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
-    // PART 1
     let (robut_output, computer_input) = channel();
     let (computer_output, robut_input) = channel();
     thread::spawn(move || {
@@ -258,9 +260,10 @@ fn main() -> Result<(), SendError<i64>> {
 
     let oxygen_node = nodes.values().filter(|node| node.is_oxygen).nth(0).unwrap();
 
+    // PART 1
     let count = astar(start_node.pos, oxygen_node.pos, &nodes);
     println!("shortest path to precious oxygen:{}", count);
-
+    // PART 2
     let count = imbue_precious_oxygen(&mut nodes);
     println!("time to imbue precious oxygen everywhere:{}", count);
 

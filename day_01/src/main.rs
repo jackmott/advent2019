@@ -14,5 +14,4 @@ fn main() {
     println!("{}",result);
     let result : i64 = read_fromstr("input.txt").map(|mass| calc_fuel(0,mass)).sum();
     println!("{}",result);
-    clip(result.to_string());
 }

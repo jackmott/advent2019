@@ -57,7 +57,6 @@ fn main() {
     }
     //answer to part1
     println!("distance:{}", min_dist);
-    clip(min_dist.to_string());
 
     //Now compute steps for all candidate points
     let mut min_steps = std::usize::MAX;
@@ -77,5 +76,4 @@ fn main() {
     }
 
     println!("steps:{}", min_steps);
-    clip(min_steps.to_string());
 }

@@ -15,6 +15,7 @@ struct Chemical {
 }
 
 // Recursively determine the amount needed of a given chemical to produce fuel amount of fuel
+// If you start from ORE and work your way up the graph this works
 fn amount_needed(chemical: &str, graph: &HashMap<String, Chemical>, fuel: u64) -> u64 {
     let chemical = &graph[chemical];
     let mut total = 0;
@@ -70,16 +71,12 @@ fn main() {
         });
     }
 
-    for chemical in graph.values() {
-        println!("{:?}", chemical);
-    }
-
     //Part1
     println!("Amount needed:{}", amount_needed("ORE", &graph, 1));
 
     // Part2 binary search for the answer
     // Probably this could be done more directly but this was faster to figure out
-    let trillion = 1000000000000;
+    let trillion = 1_000_000_000_000;
     let mut low = 0;
     let mut high = trillion;
     loop {

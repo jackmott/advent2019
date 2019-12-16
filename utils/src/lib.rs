@@ -1,4 +1,3 @@
-use clipboard::*;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 use std::str::FromStr;
@@ -18,8 +17,3 @@ where T: FromStr, <T as FromStr>::Err : std::fmt::Debug
     read_file(file_name).map(|line| line.parse::<T>().expect(&format!("unable to parse {}",line)))
 }
 
-/// Put a string on the system clipboard
-pub fn clip(s:String) {
-    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-    ctx.set_contents(s.to_owned()).unwrap();
-}

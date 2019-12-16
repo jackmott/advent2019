@@ -17,21 +17,21 @@ struct Chemical {
 // Recursively determine the amount needed of a given chemical to produce fuel amount of fuel
 // If you start from ORE and work your way up the graph this works
 fn amount_needed(chemical: &str, graph: &HashMap<String, Chemical>, fuel: u64) -> u64 {
-    let chemical = &graph[chemical];
-    let mut total = 0;
-    for reaction in &chemical.produces {
-        let needed = if reaction.name == "FUEL" {
-            //base case
-            reaction.input_amount * fuel
-        } else {
-            let units_needed = (amount_needed(&reaction.name, graph, fuel) as f64
-                / reaction.output_amount as f64)
-                .ceil() as u64;
-            reaction.input_amount * units_needed
-        };
-        total += needed;
-    }
-    total
+    graph[chemical]
+        .produces
+        .iter()
+        .map(|reaction| {
+            if reaction.name == "FUEL" {
+                //base case
+                reaction.input_amount * fuel
+            } else {
+                let units_needed = (amount_needed(&reaction.name, graph, fuel) as f64
+                    / reaction.output_amount as f64)
+                    .ceil() as u64;
+                reaction.input_amount * units_needed
+            }
+        })
+        .sum()
 }
 
 fn main() {

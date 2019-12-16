@@ -104,11 +104,14 @@ fn check_direction(
     let opposite_dir = opposite_dir(dir);
     match nodes.get(&pos) {
         None => {
+            // move the robot to the new room
             output.send(dir).unwrap();
+            // see what happened when we tried to move
             let status = input.recv().unwrap();
+            // If we moved, make a new node and recursively explore
             if status == MOVED || status == OXYGEN {
                 let is_oxygen = status == OXYGEN;
-                let new_node = Node {
+                let mut new_node = Node {
                     pos: pos,
                     explored: false,
                     is_oxygen,
@@ -118,30 +121,21 @@ fn check_direction(
                     w: None,
                 };
                 node.set_neighbor(dir, pos);
+                // Update the nodes hash with the new node values (which are copy)
                 nodes.insert(node.pos, *node);
                 nodes.insert(pos, new_node);
+                // Recursion
+                explore_nodes(&mut new_node, output, input, nodes);
+                // Backtrack
                 output.send(opposite_dir).unwrap();
                 let _ = input.recv().unwrap();
             }
         }
+        // Node already exists, just set the neighbor relationship
         Some(_) => {
             node.set_neighbor(dir, pos);
             nodes.insert(node.pos, *node);
         }
-    }
-
-    match node.get_neighbor(dir) {
-        Some(next_pos) => {
-            let mut next_node = nodes[&next_pos];
-            output.send(dir).unwrap();
-            let _ = input.recv().unwrap();
-            if !next_node.explored {
-                explore_nodes(&mut next_node, output, input, nodes);
-            }
-            output.send(opposite_dir).unwrap();
-            let _ = input.recv().unwrap();
-        }
-        _ => (),
     }
 }
 
@@ -153,10 +147,9 @@ fn explore_nodes(
 ) {
     node.explored = true;
     nodes.insert(node.pos, *node);
-    check_direction(NORTH, node, output, input, nodes);
-    check_direction(SOUTH, node, output, input, nodes);
-    check_direction(EAST, node, output, input, nodes);
-    check_direction(WEST, node, output, input, nodes);
+    for dir in 1 .. 5 {
+        check_direction(dir, node, output, input, nodes);
+    }
 }
 
 // astar search to find shortest path to SWEET OXYGEN

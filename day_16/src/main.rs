@@ -16,9 +16,7 @@ fn part1() {
                 .enumerate()
                 .skip(i) //optimization, since all will be * 0
                 .map(|(j, d)| d * base_pattern[((j + 1) / (i + 1)) % 4])
-                .sum::<i64>()
-                .abs()
-                % 10;
+                .sum::<i64>().abs()%10;
         }
     }
 
@@ -39,8 +37,8 @@ fn part2() {
         .iter()
         .map(|c| c.to_string().parse::<i64>().unwrap())
         .cycle()
+        .take(10000 * input_chars.len())
         .skip(offset)
-        .take(10000 * input_chars.len() - offset) //slightly faster to skip then take, than vice versa
         .collect();
 
     // This pattern only works on the 2nd half of the array

@@ -1,9 +1,9 @@
 use intcomputer::*;
 use std::collections::VecDeque;
+use std::fs;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::{Receiver, SendError, Sender};
 use std::thread;
-use std::fs;
 
 fn perm_helper(len: usize, nums: &mut [i64]) -> Vec<Vec<i64>> {
     let mut result: Vec<Vec<i64>> = Vec::new();
@@ -38,17 +38,17 @@ fn main() -> Result<(), SendError<i64>> {
 
     // Phase Settings
     let nums: Vec<i64> = vec![0, 1, 2, 3, 4];
-    let (a_cmd_send,a_cmd_recv) = channel();
-    let (b_cmd_send,b_cmd_recv) = channel();
-    let (c_cmd_send,c_cmd_recv) = channel();
-    let (d_cmd_send,d_cmd_recv) = channel();
-    let (e_cmd_send,e_cmd_recv) = channel();
-    let (start,a_input_recv) = channel();
-    let (a_output_send,b_input_recv) = channel();
-    let (b_output_send,c_input_recv) = channel();
-    let (c_output_send,d_input_recv) = channel();
-    let (d_output_send,e_input_recv) = channel();
-    let (e_output_send,end) = channel();
+    let (a_cmd_send, a_cmd_recv) = channel();
+    let (b_cmd_send, b_cmd_recv) = channel();
+    let (c_cmd_send, c_cmd_recv) = channel();
+    let (d_cmd_send, d_cmd_recv) = channel();
+    let (e_cmd_send, e_cmd_recv) = channel();
+    let (start, a_input_recv) = channel();
+    let (a_output_send, b_input_recv) = channel();
+    let (b_output_send, c_input_recv) = channel();
+    let (c_output_send, d_input_recv) = channel();
+    let (d_output_send, e_input_recv) = channel();
+    let (e_output_send, end) = channel();
 
     let a_input = start.clone();
     let b_input = a_output_send.clone();
@@ -56,41 +56,70 @@ fn main() -> Result<(), SendError<i64>> {
     let d_input = c_output_send.clone();
     let e_input = d_output_send.clone();
 
-
-
     let a_digits = digits.clone();
     thread::spawn(move || {
-        SuperComputer::new_command("A".to_string(), a_digits, a_output_send, a_input_recv,Some(a_cmd_recv)).run();
+        SuperComputer::new_command(
+            "A".to_string(),
+            a_digits,
+            a_output_send,
+            a_input_recv,
+            Some(a_cmd_recv),
+        )
+        .run();
     });
 
     let b_digits = digits.clone();
     thread::spawn(move || {
-        SuperComputer::new_command("B".to_string(), b_digits, b_output_send, b_input_recv,Some(b_cmd_recv)).run();
+        SuperComputer::new_command(
+            "B".to_string(),
+            b_digits,
+            b_output_send,
+            b_input_recv,
+            Some(b_cmd_recv),
+        )
+        .run();
     });
 
     let c_digits = digits.clone();
     thread::spawn(move || {
-        SuperComputer::new_command("C".to_string(), c_digits, c_output_send, c_input_recv,Some(c_cmd_recv)).run();
+        SuperComputer::new_command(
+            "C".to_string(),
+            c_digits,
+            c_output_send,
+            c_input_recv,
+            Some(c_cmd_recv),
+        )
+        .run();
     });
 
     let d_digits = digits.clone();
     thread::spawn(move || {
-        SuperComputer::new_command("D".to_string(), d_digits, d_output_send, d_input_recv,Some(d_cmd_recv)).run();
+        SuperComputer::new_command(
+            "D".to_string(),
+            d_digits,
+            d_output_send,
+            d_input_recv,
+            Some(d_cmd_recv),
+        )
+        .run();
     });
 
     let e_digits = digits.clone();
     thread::spawn(move || {
-        SuperComputer::new_command("E".to_string(), e_digits, e_output_send, e_input_recv,Some(e_cmd_recv)).run();
+        SuperComputer::new_command(
+            "E".to_string(),
+            e_digits,
+            e_output_send,
+            e_input_recv,
+            Some(e_cmd_recv),
+        )
+        .run();
     });
-
-
-
 
     let perms = perm(nums);
     let mut max = -999999;
     // For each permutation of phase settings
     for perm in perms {
-
         e_input.send(perm[4])?;
         d_input.send(perm[3])?;
         c_input.send(perm[2])?;
@@ -99,8 +128,6 @@ fn main() -> Result<(), SendError<i64>> {
         a_input.send(perm[0])?;
         a_input.send(0)?;
 
-
-
         // Get the output from the last am,plifier
         match end.recv() {
             Ok(last_amplifier_output) => {
@@ -108,14 +135,13 @@ fn main() -> Result<(), SendError<i64>> {
                     max = last_amplifier_output;
                 }
             }
-            Err(err) => panic!("we broke {:?}",err),
+            Err(err) => panic!("we broke {:?}", err),
         }
         a_cmd_send.send(Command::Reset(digits.clone())).unwrap();
         b_cmd_send.send(Command::Reset(digits.clone())).unwrap();
         c_cmd_send.send(Command::Reset(digits.clone())).unwrap();
         d_cmd_send.send(Command::Reset(digits.clone())).unwrap();
         e_cmd_send.send(Command::Reset(digits.clone())).unwrap();
-
     }
     println!("max:{}", max);
 

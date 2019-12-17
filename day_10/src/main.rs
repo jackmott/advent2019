@@ -114,28 +114,4 @@ fn main() {
             return;
         }
     }
-
-    /*  for debugging
-    for i in 9 .. 18 {
-        destroyed_asteroids.push(visible_asteroids[i]);
-    }
-    for y in 0..h {
-        for x in 0..w {
-            let index = (y * w + x) as usize;
-            match destroyed_asteroids.iter().position(|a| *a == index) {
-                Some(i) => print!("{}", i+1),
-                None => {
-                    if asteroid_map[index] {
-                        print!("#");
-                    } else {
-                        print!(".")
-                    }
-                }
-            }
-        }
-        println!("");
-
-    }
-    println!("---");
-    print_map(&asteroid_map,w,h);*/
 }

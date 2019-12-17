@@ -1,4 +1,5 @@
 use intcomputer::*;
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs;
 use std::sync::mpsc::channel;
@@ -169,10 +170,8 @@ fn main() -> Result<(), SendError<i64>> {
     println!("{}", robot.paint_map.len());
 
     // HashMap simplifies a lot of things but complicates printing the image
-    let min_x = robot.paint_map.keys().min_by_key(|pos| pos.x).unwrap().x;
-    let max_x = robot.paint_map.keys().max_by_key(|pos| pos.x).unwrap().x;
-    let min_y = robot.paint_map.keys().min_by_key(|pos| pos.y).unwrap().y;
-    let max_y = robot.paint_map.keys().max_by_key(|pos| pos.y).unwrap().y;
+    let (min_x,max_x) = robot.paint_map.keys().map(|pos| pos.x).minmax().into_option().unwrap();
+    let (min_y,max_y) = robot.paint_map.keys().map(|pos| pos.y).minmax().into_option().unwrap();
     for y in min_y .. max_y+1 {
         for x in min_x .. max_x+1 {
             let color =

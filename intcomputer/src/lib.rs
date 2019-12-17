@@ -1,6 +1,49 @@
 use std::sync::mpsc::{Receiver, Sender};
 
 
+pub struct Term {
+    sender:Sender<i64>,
+    pub receiver:Receiver<i64>,
+}
+impl Term {
+
+    pub fn new(sender:Sender<i64>,receiver:Receiver<i64>) -> Term {
+        Term {
+            sender,
+            receiver
+        }
+    }
+    pub fn send(&self,data:i64) {
+        match self.sender.send(data) {
+            Ok(_) => (),
+            Err(err) => panic!("error sending:{}",err),
+        }
+    }
+
+    pub fn recv(&self) -> i64 {
+        match self.receiver.recv() {
+            Ok(data) => data,
+            _ => panic!("tried to recv but channel dead"),
+        }
+    }
+
+    pub fn send_string(&self,s:&str) {
+        for c in s.chars() {
+            let data = c as i64;
+            println!("sending:{} as {}",c,data);
+            self.send(data);
+        }
+    }
+}
+
+
+
+// Feature in progress
+use Command::*;
+pub enum Command {
+    Reset(Vec<i64>),
+    Quit,
+}
 
 #[allow(dead_code)]
 pub struct SuperComputer {
@@ -14,11 +57,6 @@ pub struct SuperComputer {
     pub last_output: Option<i64>,
 }
 
-use Command::*;
-pub enum Command {
-    Reset(Vec<i64>),
-    Quit,
-}
 
 use ParameterMode::*;
 #[derive(Debug,Copy,Clone)]

@@ -167,17 +167,12 @@ fn part2() {
     term.send_string("L,4,L,4,L,6\n");
     term.send_string("n\n");
 
-    let mut dust = 0;
+
     // It seems like the computer outputs the map or something
     // before the number so keep receiver till the end
-    loop {
-        match term.receiver.recv() {
-            Ok(num) => dust = num,
-            Err(_) => break,
-        }
-    }
+    let data = term.recv_till_disconnect();
 
-    println!("dust:{}", dust);
+    println!("dust:{}", data.last().unwrap());
 }
 
 fn main() {

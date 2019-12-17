@@ -1,4 +1,4 @@
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender,TryRecvError};
 
 
 pub struct Term {
@@ -24,6 +24,29 @@ impl Term {
         match self.receiver.recv() {
             Ok(data) => data,
             _ => panic!("tried to recv but channel dead"),
+        }
+    }
+
+    pub fn recv_till_block(&self) -> std::vec::IntoIter<i64> {
+        let mut result = Vec::new();
+        loop {
+            match self.receiver.try_recv() {
+                Ok(data) => result.push(data),
+                Err(err) => match err {
+                    TryRecvError::Empty => return result.into_iter(),
+                    TryRecvError::Disconnected => panic!("terminal dead"),
+                }
+            }
+        }
+    }
+
+    pub fn recv_till_disconnect(&self) -> std::vec::IntoIter<i64>  {
+        let mut result = Vec::new();
+        loop {
+            match self.receiver.recv() {
+                Ok(data) => result.push(data),
+                Err(_) => return result.into_iter()
+            }
         }
     }
 

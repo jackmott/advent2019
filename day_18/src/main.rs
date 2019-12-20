@@ -2,7 +2,6 @@ use bitflags::*;
 use petgraph::algo::astar;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::EdgeRef;
-use petgraph::Directed;
 use petgraph::Graph;
 use petgraph::Undirected;
 use std::collections::HashMap;
@@ -261,29 +260,9 @@ fn build_map_graph(
     }
 }
 
-#[derive(Debug)]
-struct Path {
-    path: Vec<NodeIndex<usize>>,
-    keys_needed: Keys,
-    start_key: Keys,
-    end_key: Keys,
-}
-impl Path {
-    fn new(path: Vec<NodeIndex<usize>>, map_graph: &MapGraph) -> Path {
-        let mut keys_needed = Keys::empty();
-        for node_index in &path {
-            keys_needed = keys_needed | map_graph[*node_index].door;
-        }
-        let end = path.len() - 1;
-        let start_key = map_graph[path[0]].key;
-        let end_key = map_graph[path[end]].key;
-        Path {
-            path,
-            keys_needed,
-            start_key,
-            end_key,
-        }
-    }
+
+fn indices_to_string(indices:&Vec<NodeIndex<usize>>) -> String{
+    indices.iter().map(|i| i.index().to_string()).collect()
 }
 
 fn main() {
@@ -327,11 +306,11 @@ fn main() {
             Start => true,
             _ => false,
         })
-        .map(|(index, tile)| index)
+        .map(|(index, _)| index)
         .collect();
 
     let mut map_graph: MapGraph = Graph::default();
-    let mut start_node_indices: Vec<NodeIndex<usize>> = start_tile_indices
+    let start_node_indices: Vec<NodeIndex<usize>> = start_tile_indices
         .iter()
         .map(|index| map_graph.add_node(MapNodeData::from_tile(&map.tiles[*index])))
         .collect();
@@ -371,16 +350,17 @@ fn main() {
 
     let mut queue = VecDeque::new();
     let mut cost_map = HashMap::new();
-    queue.push_back((0, Keys::empty(), start_node_indices[0]));
+    cost_map.insert((indices_to_string(&start_node_indices), Keys::empty()), 0);
+    queue.push_back((0, Keys::empty(), start_node_indices));
 
     // key your at and keys you have -> cost
-    cost_map.insert((start_node_indices[0], Keys::empty()), 0);
+
     let mut min_cost = 0;
     let mut old_queue_size = 0;
     let mut path_map = HashMap::new();
     while queue.len() > 0 {
         //   println!("-----------------");
-        let (current_cost, current_keys, current_node) = queue.pop_front().unwrap();
+        let (current_cost, current_keys, current_nodes) = queue.pop_front().unwrap();
         if current_keys == final_keys {
             println!("woo");
             if min_cost == 0 {
@@ -396,7 +376,12 @@ fn main() {
             old_queue_size = queue.len()
         }
         for next_key in key_vec.iter().filter(|key| !current_keys.contains(**key)) {
+            for (i,_) in current_nodes.iter().enumerate() {
+
             let next_node = key_node_map[next_key];
+            let mut next_nodes = current_nodes.clone();
+            let current_node = current_nodes[i];
+            next_nodes[i] = next_node;
             //  println!("can I get from {:?} to {:?}?", current_key, next_key);
             let cost = if path_map.contains_key(&(current_node, next_key, current_keys)) {
                 // println!("cache hit");
@@ -407,7 +392,7 @@ fn main() {
                 let result = astar(
                     &map_graph,
                     current_node,
-                    |finish| finish == key_node_map[next_key],
+                    |finish| finish == next_node,
                     |e| {
                         if !current_keys.contains(map_graph[e.target()].door)
                             && e.target() != key_node_map[next_key]
@@ -423,13 +408,15 @@ fn main() {
                         if !current_keys.contains(map_graph[n].door) {
                             9999999
                         } else {
-                            1
+                            let start_pos = map_graph[n].pos;
+                            let end_pos = map_graph[next_node].pos;
+                            (start_pos.x as i32 - end_pos.x as i32).abs() + (start_pos.y as i32 - end_pos.y as i32).abs()
                         }
                     },
                 );
                 match result {
                     Some((cost, _)) => cost,
-                    None => continue,
+                    None => 9999999,
                 }
             };
             path_map.insert((current_node, next_key, current_keys), cost);
@@ -441,12 +428,12 @@ fn main() {
 
             let new_keys = *next_key | current_keys;
             let new_cost = current_cost + cost;
-
-            match cost_map.get_mut(&(next_node, new_keys)) {
+            let next_nodes_str = indices_to_string(&next_nodes);
+            match cost_map.get_mut(&(next_nodes_str.clone(), new_keys)) {
                 Some(cost) if *cost <= new_cost => continue,
                 Some(cost) => *cost = new_cost,
                 None => {
-                    let _ = cost_map.insert((next_node, new_keys), new_cost);
+                    let _ = cost_map.insert((next_nodes_str, new_keys), new_cost);
                 }
             }
             /*  println!(
@@ -459,8 +446,9 @@ fn main() {
             );*/
 
             // println!("pushing {:?} with cost {} ", path.end_key, new_cost);
-            queue.push_back((new_cost, new_keys, next_node));
+            queue.push_back((new_cost, new_keys, next_nodes));
         }
+    }
     }
 
     println!("win!:{}", min_cost);

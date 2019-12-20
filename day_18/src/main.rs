@@ -1,9 +1,79 @@
+use bitflags::*;
 use petgraph::algo::astar;
 use petgraph::graph::NodeIndex;
+use petgraph::visit::EdgeRef;
+use petgraph::Directed;
 use petgraph::Graph;
 use petgraph::Undirected;
-use std::collections::HashSet;
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use utils::*;
+
+type MapGraph = Graph<MapNodeData, i32, Undirected, usize>;
+
+bitflags! {
+    struct Keys:u32 {
+        const A = 1 << 0;
+        const B = 1 << 1;
+        const C = 1 << 2;
+        const D = 1 << 3;
+        const E = 1 << 4;
+        const F = 1 << 5;
+        const G = 1 << 6;
+        const H = 1 << 7;
+        const I = 1 << 8;
+        const J = 1 << 9;
+        const K = 1 << 10;
+        const L = 1 << 11;
+        const M = 1 << 12;
+        const N = 1 << 13;
+        const O = 1 << 14;
+        const P = 1 << 15;
+        const Q = 1 << 16;
+        const R = 1 << 17;
+        const S = 1 << 18;
+        const T = 1 << 19;
+        const U = 1 << 20;
+        const V = 1 << 21;
+        const W = 1 << 22;
+        const X = 1 << 23;
+        const Y = 1 << 24;
+        const Z = 1 << 25;
+    }
+}
+impl Keys {
+    fn from_char(c: char) -> Keys {
+        match c.to_lowercase().nth(0).unwrap() {
+            'a' => Keys::A,
+            'b' => Keys::B,
+            'c' => Keys::C,
+            'd' => Keys::D,
+            'e' => Keys::E,
+            'f' => Keys::F,
+            'g' => Keys::G,
+            'h' => Keys::H,
+            'i' => Keys::I,
+            'j' => Keys::J,
+            'k' => Keys::K,
+            'l' => Keys::L,
+            'm' => Keys::M,
+            'n' => Keys::N,
+            'o' => Keys::O,
+            'p' => Keys::P,
+            'q' => Keys::Q,
+            'r' => Keys::R,
+            's' => Keys::S,
+            't' => Keys::T,
+            'u' => Keys::U,
+            'v' => Keys::V,
+            'w' => Keys::W,
+            'x' => Keys::X,
+            'y' => Keys::Y,
+            'z' => Keys::Z,
+            _ => panic!("invalid key/door"),
+        }
+    }
+}
 
 struct Map {
     tiles: Vec<Tile>,
@@ -11,21 +81,51 @@ struct Map {
     h: usize,
 }
 impl Map {
-    fn get_tile(&self, pos: Pos) -> Option<(&Tile, usize)> {
-        if pos.x as usize >= self.w || pos.y as usize >= self.h {
-            None
-        } else {
-            let index = pos.y * self.w + pos.x;
-            Some((&self.tiles[index], index))
+    fn get_neighbors(&self, pos: Pos) -> Vec<(Pos, bool)> {
+        let mut result = Vec::new();
+
+        let (open, visited) = self.is_open(pos.up());
+        if open {
+            result.push((pos.up(), visited));
         }
+
+        let (open, visited) = self.is_open(pos.down());
+        if open {
+            result.push((pos.down(), visited));
+        }
+
+        let (open, visited) = self.is_open(pos.left());
+        if open {
+            result.push((pos.left(), visited));
+        }
+
+        let (open, visited) = self.is_open(pos.right());
+        if open {
+            result.push((pos.right(), visited));
+        }
+
+        println!("get unvisited n for {:?}", pos);
+        println!("{:?}", result);
+        result
     }
-    fn from_index(&self, index: usize) -> Pos {
-        let x = index % self.w;
-        let y = index / self.w;
-        Pos { x, y }
+
+    fn get_tile(&self, pos: Pos) -> &Tile {
+        let index = pos.y as usize * self.w + pos.x as usize;
+        &self.tiles[index]
+    }
+
+    fn get_index(&self, pos: Pos) -> usize {
+        pos.y * self.w + pos.x
+    }
+    fn is_open(&self, pos: Pos) -> (bool, bool) {
+        self.get_tile(pos).is_open()
+    }
+    fn visit(&mut self, pos: Pos) {
+        let index = self.get_index(pos);
+        self.tiles[index].visited = true;
     }
 }
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 struct Pos {
     x: usize,
     y: usize,
@@ -65,23 +165,22 @@ use TileType::*;
 enum TileType {
     Space,
     Wall,
-    Door(u8),
-    Key(u8),
+    Door(Keys),
+    Key(Keys),
     Start,
 }
 impl TileType {
-    fn is_open(&self, keys: &Vec<u8>) -> bool {
+    fn is_open(&self) -> bool {
         match self {
-            Space | Start | Key(_) => true,
-            Door(key) => keys.iter().any(|k| key == k),
             Wall => false,
+            _ => true,
         }
     }
 
     fn from_char(c: char) -> TileType {
         match c {
-            _ if c >= 'a' && c <= 'z' => Key(c as u8 - 'a' as u8),
-            _ if c >= 'A' && c <= 'Z' => Door(c as u8 - 'A' as u8),
+            _ if c >= 'a' && c <= 'z' => Key(Keys::from_char(c)),
+            _ if c >= 'A' && c <= 'Z' => Door(Keys::from_char(c)),
             '@' => Start,
             '.' => Space,
             '#' => Wall,
@@ -94,116 +193,95 @@ impl TileType {
 struct Tile {
     tile_type: TileType,
     pos: Pos,
-    visited_keys: HashSet<String>,
+    visited: bool,
 }
 impl Tile {
     fn from_char(c: char, pos: Pos) -> Tile {
         Tile {
             tile_type: TileType::from_char(c),
             pos,
-            visited_keys: HashSet::new(),
+            visited: false,
         }
     }
-
-    fn is_open(&self, keys: &Vec<u8>) -> bool {
-        self.tile_type.is_open(keys)
-    }
-
-    fn visit(&mut self, keys: &Vec<u8>) {
-        let s: String = keys.iter().map(|i| i.to_string()).collect();
-        self.visited_keys.insert(s);
-    }
-
-    fn is_visited(&self, keys: &Vec<u8>) -> bool {
-        let s: String = keys.iter().map(|i| i.to_string()).collect();
-        self.visited_keys.contains(&s)
+    fn is_open(&self) -> (bool, bool) {
+        (self.tile_type.is_open(), self.visited)
     }
 }
 
-#[derive(Clone, Debug)]
-struct NodeData {
+#[derive(Clone, Copy, Debug)]
+struct MapNodeData {
     pos: Pos,
-    keys: Vec<u8>,
+    key: Keys,
+    door: Keys,
 }
-impl NodeData {
-    fn from_tile(tile: &Tile, keys: &Vec<u8>) -> NodeData {
-        NodeData {
+impl MapNodeData {
+    fn from_tile(tile: &Tile) -> MapNodeData {
+        let door = match tile.tile_type {
+            Door(key) => key,
+            _ => Keys::empty(),
+        };
+        let key = match tile.tile_type {
+            Key(key) => key,
+            _ => Keys::empty(),
+        };
+        MapNodeData {
             pos: tile.pos,
-            keys: keys.clone(),
+            key: key,
+            door: door,
         }
     }
 }
 
-fn get_neighbors(pos: Pos, map: &Map, keys: &Vec<u8>) -> Vec<usize> {
-    let mut result = Vec::new();
-    let up = map.get_tile(pos.up());
-    match up {
-        Some((up, index)) if up.is_open(keys) => result.push(index),
-        _ => (),
-    }
-
-    let down = map.get_tile(pos.down());
-    match down {
-        Some((down, index)) if down.is_open(keys) => result.push(index),
-        _ => (),
-    }
-
-    let left = map.get_tile(pos.left());
-    match left {
-        Some((left, index)) if left.is_open(keys) => result.push(index),
-        _ => (),
-    }
-
-    let right = map.get_tile(pos.right());
-    match right {
-        Some((right, index)) if right.is_open(keys) => result.push(index),
-        _ => (),
-    }
-
-    result
-}
-
-fn build_graph(
-    start_index: NodeIndex<usize>,
+fn build_map_graph(
+    node_index: NodeIndex<usize>,
     map: &mut Map,
-    graph: &mut Graph<NodeData, i32, Undirected, usize>,
+    graph: &mut MapGraph,
+    key_nodes: &mut Vec<NodeIndex<usize>>,
+    pos_node_map: &mut HashMap<Pos, NodeIndex<usize>>,
 ) {
-    let mut stack: Vec<(NodeIndex<usize>, Vec<u8>)> = vec![(start_index, vec![])];
-    let mut prev_stack_len = 0;
-    while let Some((node_index, keys)) = stack.pop() {
-        if stack.len() % 100 == 0 && prev_stack_len != stack.len() {
-            println!("stack len:{}",stack.len());
-            println!("graph count:{}",graph.node_count());
-            prev_stack_len = stack.len();
+    let node_data = graph[node_index];
+    pos_node_map.insert(node_data.pos, node_index);
+    let tile = map.get_tile(node_data.pos);
+    match tile.tile_type {
+        Key(_) => key_nodes.push(node_index),
+        _ => (),
+    }
+    map.visit(node_data.pos);
+    for (pos, visited) in map.get_neighbors(node_data.pos) {
+        let tile = map.get_tile(pos);
+
+        if !visited {
+            let next_node_index = graph.add_node(MapNodeData::from_tile(tile));
+            graph.update_edge(node_index, next_node_index, 1);
+            build_map_graph(next_node_index, map, graph, key_nodes, pos_node_map);
+        } else {
+            let next_node_index = *pos_node_map.get(&pos).unwrap();
+            graph.update_edge(node_index, next_node_index, 1);
+        };
+    }
+}
+
+#[derive(Debug)]
+struct Path {
+    path: Vec<NodeIndex<usize>>,
+    keys_needed: Keys,
+    start_key: Keys,
+    end_key: Keys,
+}
+impl Path {
+    fn new(path: Vec<NodeIndex<usize>>, map_graph: &MapGraph) -> Path {
+        let mut keys_needed = Keys::empty();
+        for node_index in &path {
+            keys_needed = keys_needed | map_graph[*node_index].door;
         }
-
-        let data = graph[node_index].clone();
-        let (_, index) = map.get_tile(data.pos).unwrap();
-
-        /*   println!(
-            "visiting {:?} with {:?} at {:?} ",
-            map.tiles[index].pos, keys, node_index
-        );*/
-        map.tiles[index].visit(&keys);
-        for neighbor in get_neighbors(data.pos, map, &keys) {
-            if !map.tiles[neighbor].is_visited(&keys) {
-                match map.tiles[neighbor].tile_type {
-                    Key(new_key) if !keys.iter().any(|k| *k == new_key) => {
-                        let mut keys = keys.clone();
-                        keys.push(new_key);
-                        let neighbor_index =
-                            graph.add_node(NodeData::from_tile(&map.tiles[neighbor], &keys));
-                        graph.update_edge(node_index, neighbor_index, 1);
-                        stack.push((neighbor_index, keys));
-                    }
-                    _ => {
-                        let neighbor_index =
-                            graph.add_node(NodeData::from_tile(&map.tiles[neighbor], &keys));
-                        graph.update_edge(node_index, neighbor_index, 1);
-                        stack.push((neighbor_index, keys.clone()));
-                    }
-                };
-            }
+        let end = path.len() - 1;
+        let start_key = map_graph[path[0]].key;
+        let end_key = map_graph[path[end]].key;
+        Path {
+            path,
+            keys_needed,
+            start_key,
+            end_key,
         }
     }
 }
@@ -212,61 +290,188 @@ fn main() {
     let mut w = 0;
     let mut tiles: Vec<Tile> = Vec::new();
     let mut y = 0;
+    let mut key_count = 0;
     for line in read_file("input.txt") {
         w = line.len();
         let mut x = 0;
         for c in line.chars() {
             let tile = Tile::from_char(c, Pos { x, y });
+            match tile.tile_type {
+                Key(_) => key_count += 1,
+                _ => (),
+            }
             tiles.push(tile);
             x += 1;
         }
         y += 1;
     }
+
+    let mut final_keys = Keys::empty();
+    let mut char_key = 'a';
+    let mut key_vec = Vec::new();
+    for _ in 0..key_count {
+        let key = Keys::from_char(char_key);
+        final_keys = final_keys | key;
+        key_vec.push(key);
+        char_key = (char_key as u8 + 1) as char;
+    }
+
     let h = tiles.len() / w;
     let mut map = Map { tiles, w, h };
 
-    let start_tile_index = map
+    let start_tile_indices: Vec<usize> = map
         .tiles
         .iter()
-        .position(|tile| match tile.tile_type {
+        .enumerate()
+        .filter(|(_, tile)| match tile.tile_type {
             Start => true,
             _ => false,
         })
-        .unwrap();
+        .map(|(index, tile)| index)
+        .collect();
 
-    let keys = Vec::new();
-    let mut graph = Graph::<NodeData, i32, Undirected, usize>::default();
-    let start_node_index = graph.add_node(NodeData::from_tile(&map.tiles[start_tile_index], &keys));
-    //map.tiles[start_tile_index].visit(Keys::empty());
+    let mut map_graph: MapGraph = Graph::default();
+    let mut start_node_indices: Vec<NodeIndex<usize>> = start_tile_indices
+        .iter()
+        .map(|index| map_graph.add_node(MapNodeData::from_tile(&map.tiles[*index])))
+        .collect();
 
-    build_graph(start_node_index, &mut map, &mut graph);
-    let start_pos = map.tiles[start_tile_index].pos;
-    /* ..exmaple 2
-    let (count,path) = astar(&graph,start_node_index,|finish| graph[finish].keys == Keys::A | Keys::B | Keys::C | Keys::D | Keys::E | Keys::F,|_| 1,|n| {
-        (start_pos.x as i32 - graph[n].pos.x as i32).abs()+(start_pos.y as i32 -graph[n].pos.y as i32).abs()
-    }).unwrap();
-    */
-    println!("done building graph");
-    let (cost, path) = astar(
-        &graph,
-        start_node_index,
-        |finish| graph[finish].keys.len() == 10,
-        |e| *e.weight(),
-        |n| {
-            (start_pos.x as i32 - graph[n].pos.x as i32).abs()
-                + (start_pos.y as i32 - graph[n].pos.y as i32).abs()
-        },
-    )
-    .unwrap();
-
-    println!("node count:{}", graph.node_count());
-    println!("path cost:{}", cost);
-    println!("Path len:{}", path.len());
-
-    let node_index = NodeIndex::new(40); //start_node_index;
-    let node = graph[node_index].clone();
-    println!("{:?}:{:?}   {:?}", node_index, node.pos, node.keys);
-    for node in graph.neighbors(node_index) {
-        print!("{:?} -> {:?},", node, graph[node]);
+    let mut key_nodes = Vec::new();
+    for index in &start_node_indices {
+        key_nodes.push(*index);
     }
+    println!("key nodes after append:{:?}", key_nodes);
+    let mut pos_node_map = HashMap::new();
+    for index in &start_node_indices {
+        build_map_graph(
+            *index,
+            &mut map,
+            &mut map_graph,
+            &mut key_nodes,
+            &mut pos_node_map,
+        );
+        println!("graph node count:{}", map_graph.node_count());
+    }
+    println!("key nodes after building graph:{:?}", key_nodes);
+
+
+    println!("key nodes:{:?}", key_nodes);
+    let key_node_map: HashMap<Keys, NodeIndex<usize>> = key_nodes
+        .iter()
+        .map(|index| {
+            let node = map_graph[*index];
+            let key = node.key;
+            (key, *index)
+        })
+        .collect();
+    println!("key node map:{:?}", key_node_map);
+
+
+
+
+    let mut path_hash: HashMap<Keys, Vec<&Path>> = HashMap::new();
+    for path in &key_key_paths {
+        match path_hash.get_mut(&path.start_key) {
+            Some(path_vec) => path_vec.push(path),
+            None => {
+                let _ = path_hash.insert(path.start_key, vec![path]);
+            }
+        }
+    }
+
+    let mut queue = VecDeque::new();
+    let mut cost_map = HashMap::new();
+    queue.push_back((0, Keys::empty(), Keys::empty()));
+
+    // key your at and keys you have -> cost
+    cost_map.insert((Keys::empty(), Keys::empty()), 0);
+    let mut min_cost = 0;
+    let mut old_queue_size = 0;
+    let mut path_map = HashMap::new();
+    while queue.len() > 0 {
+        //   println!("-----------------");
+        let (current_cost, current_keys, current_key) = queue.pop_front().unwrap();
+        if current_keys == final_keys {
+            println!("woo");
+            if min_cost == 0 {
+                min_cost = current_cost;
+            } else if current_cost < min_cost {
+                min_cost = current_cost;
+            }
+            //break;
+        }
+
+        if (queue.len() as i32 - old_queue_size as i32).abs() % 1000 == 0 {
+            println!("queue size{} ", queue.len());
+            old_queue_size = queue.len()
+        }
+        for next_key in key_vec.iter().filter(|key| !current_keys.contains(**key)) {
+            //  println!("can I get from {:?} to {:?}?", current_key, next_key);
+            let cost = if path_map.contains_key(&(current_key, next_key, current_keys)) {
+                // println!("cache hit");
+                path_map[&(current_key, next_key, current_keys)]
+            } else {
+                let start_node = key_node_map[&current_key];
+                println!("looking for {:?} to {:?}", current_key, next_key);
+                println!("{:?}", key_node_map);
+                let result = astar(
+                    &map_graph,
+                    start_node,
+                    |finish| finish == key_node_map[next_key],
+                    |e| {
+                        if !current_keys.contains(map_graph[e.target()].door)
+                            && e.target() != key_node_map[next_key]
+                        {
+                            //println!("edge:{:?} -> {:?}",map_graph[e.source()].pos, map_graph[e.target()].pos);
+                            9999999
+                        } else {
+                            //println!("edge:{:?} -> {:?}",map_graph[e.source()].pos, map_graph[e.target()].pos);
+                            *e.weight()
+                        }
+                    },
+                    |n| {
+                        if !current_keys.contains(map_graph[n].door) {
+                            9999999
+                        } else {
+                            1
+                        }
+                    },
+                );
+                match result {
+                    Some((cost, _)) => cost,
+                    None => continue,
+                }
+            };
+            path_map.insert((current_key, next_key, current_keys), cost);
+            // println!("maybe at cost:{}", cost);
+            if cost >= 9999999 {
+                continue;
+            }
+            // println!("yes at cost:{}", cost);
+
+            let new_keys = *next_key | current_keys;
+            let new_cost = current_cost + cost;
+
+            match cost_map.get_mut(&(*next_key, new_keys)) {
+                Some(cost) if *cost <= new_cost => continue,
+                Some(cost) => *cost = new_cost,
+                None => {
+                    let _ = cost_map.insert((*next_key, new_keys), new_cost);
+                }
+            }
+            /*  println!(
+                "currently have {:?} at cost {} considering {:?} with pathlen {} new cost:{}",
+                current_keys,
+                current_cost,
+                path.end_key,
+                path.path.len(),
+                new_cost
+            );*/
+
+            // println!("pushing {:?} with cost {} ", path.end_key, new_cost);
+            queue.push_back((new_cost, new_keys, *next_key));
+        }
+    }
+
+    println!("win!:{}", min_cost);
 }

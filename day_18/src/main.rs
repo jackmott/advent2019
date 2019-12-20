@@ -369,19 +369,9 @@ fn main() {
 
 
 
-    let mut path_hash: HashMap<Keys, Vec<&Path>> = HashMap::new();
-    for path in &key_key_paths {
-        match path_hash.get_mut(&path.start_key) {
-            Some(path_vec) => path_vec.push(path),
-            None => {
-                let _ = path_hash.insert(path.start_key, vec![path]);
-            }
-        }
-    }
-
     let mut queue = VecDeque::new();
     let mut cost_map = HashMap::new();
-    queue.push_back((0, Keys::empty(), Keys::empty()));
+    queue.push_back((0, Keys::empty(), start_node_indices[0]));
 
     // key your at and keys you have -> cost
     cost_map.insert((Keys::empty(), Keys::empty()), 0);
@@ -390,7 +380,7 @@ fn main() {
     let mut path_map = HashMap::new();
     while queue.len() > 0 {
         //   println!("-----------------");
-        let (current_cost, current_keys, current_key) = queue.pop_front().unwrap();
+        let (current_cost, current_keys, current_node) = queue.pop_front().unwrap();
         if current_keys == final_keys {
             println!("woo");
             if min_cost == 0 {
@@ -407,16 +397,15 @@ fn main() {
         }
         for next_key in key_vec.iter().filter(|key| !current_keys.contains(**key)) {
             //  println!("can I get from {:?} to {:?}?", current_key, next_key);
-            let cost = if path_map.contains_key(&(current_key, next_key, current_keys)) {
+            let cost = if path_map.contains_key(&(current_node, next_key, current_keys)) {
                 // println!("cache hit");
-                path_map[&(current_key, next_key, current_keys)]
+                path_map[&(current_node, next_key, current_keys)]
             } else {
-                let start_node = key_node_map[&current_key];
-                println!("looking for {:?} to {:?}", current_key, next_key);
-                println!("{:?}", key_node_map);
+             //   println!("looking for {:?} to {:?}", current_key, next_key);
+              //  println!("{:?}", key_node_map);
                 let result = astar(
                     &map_graph,
-                    start_node,
+                    current_node,
                     |finish| finish == key_node_map[next_key],
                     |e| {
                         if !current_keys.contains(map_graph[e.target()].door)
@@ -442,7 +431,7 @@ fn main() {
                     None => continue,
                 }
             };
-            path_map.insert((current_key, next_key, current_keys), cost);
+            path_map.insert((current_node, next_key, current_keys), cost);
             // println!("maybe at cost:{}", cost);
             if cost >= 9999999 {
                 continue;
@@ -469,7 +458,7 @@ fn main() {
             );*/
 
             // println!("pushing {:?} with cost {} ", path.end_key, new_cost);
-            queue.push_back((new_cost, new_keys, *next_key));
+            queue.push_back((new_cost, new_keys, key_node_map[next_key]));
         }
     }
 

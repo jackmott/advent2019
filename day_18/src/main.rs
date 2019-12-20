@@ -374,7 +374,7 @@ fn main() {
     queue.push_back((0, Keys::empty(), start_node_indices[0]));
 
     // key your at and keys you have -> cost
-    cost_map.insert((Keys::empty(), Keys::empty()), 0);
+    cost_map.insert((start_node_indices[0], Keys::empty()), 0);
     let mut min_cost = 0;
     let mut old_queue_size = 0;
     let mut path_map = HashMap::new();
@@ -396,6 +396,7 @@ fn main() {
             old_queue_size = queue.len()
         }
         for next_key in key_vec.iter().filter(|key| !current_keys.contains(**key)) {
+            let next_node = key_node_map[next_key];
             //  println!("can I get from {:?} to {:?}?", current_key, next_key);
             let cost = if path_map.contains_key(&(current_node, next_key, current_keys)) {
                 // println!("cache hit");
@@ -441,11 +442,11 @@ fn main() {
             let new_keys = *next_key | current_keys;
             let new_cost = current_cost + cost;
 
-            match cost_map.get_mut(&(*next_key, new_keys)) {
+            match cost_map.get_mut(&(next_node, new_keys)) {
                 Some(cost) if *cost <= new_cost => continue,
                 Some(cost) => *cost = new_cost,
                 None => {
-                    let _ = cost_map.insert((*next_key, new_keys), new_cost);
+                    let _ = cost_map.insert((next_node, new_keys), new_cost);
                 }
             }
             /*  println!(
@@ -458,7 +459,7 @@ fn main() {
             );*/
 
             // println!("pushing {:?} with cost {} ", path.end_key, new_cost);
-            queue.push_back((new_cost, new_keys, key_node_map[next_key]));
+            queue.push_back((new_cost, new_keys, next_node));
         }
     }
 

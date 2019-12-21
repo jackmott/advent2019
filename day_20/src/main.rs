@@ -12,10 +12,43 @@ use utils::*;
 
 struct Map {
     tiles: Vec<Tile>,
+    portal_map: HashMap<Pos,Pos>,
     w: usize,
     h: usize,
 }
 impl Map {
+
+    fn new(tiles:Vec<Tile>,w:usize,h:usize) -> Map {
+
+
+        let mut map = Map {
+            tiles,
+            portal_map:HashMap::new(),
+            w,
+            h
+        };
+        map.LoadHorizontalPortals();
+        map.LoadVerticalPortals();
+        let portals : Vec<&Tile> = map.tiles.iter().filter(|tile| match &tile.tile_type { Portal(_) => true, _ => false}).collect();
+        let portal_map =
+            portals.iter().map(|tile1|
+                {
+                println!("trying to find {:?}",tile1);
+                let tile2 =
+                    portals.iter().find(|tile2| {
+                        let portal1_string = match &tile1.tile_type { Portal(s) => s, _ => panic!("wat") };
+                        let portal2_string = match &tile2.tile_type { Portal(s) => s, _ => panic!("wat") };
+                        tile2.pos != tile1.pos && portal1_string == portal2_string
+                    }).unwrap();
+                (tile1.pos,tile2.pos)
+            }).collect();
+        map.portal_map = portal_map;
+        println!("portal map len:{}",map.portal_map.len());
+        map
+
+    }
+
+
     fn print(&self) {
         for y in 0..self.h {
             for x in 0..self.w {
@@ -66,6 +99,84 @@ impl Map {
     fn visit(&mut self, pos: Pos) {
         let index = self.get_index(pos);
         self.tiles[index].visited = true;
+    }
+
+    fn PortalStringToTile(s:&str) -> TileType {
+        if s == "AA" {
+            Start
+        } else if s == "ZZ" {
+            End
+        } else {
+            Portal(s.to_string())
+        }
+    }
+
+    fn LoadHorizontalPortals(&mut self) {
+        for y in 0..self.h {
+            for x in 0..self.w - 1 {
+                let pos = Pos::new(x, y);
+                match self.get_tile(pos).unwrap().tile_type {
+                    PortalPiece(c1) => {
+                        let tile2 = self.get_tile(pos.right()).unwrap();
+                        match tile2.tile_type {
+                            PortalPiece(c2) => {
+                                let s = c1.to_string() + &c2.to_string();
+                                match self.get_tile(pos.right().right()) {
+                                    Some(tile) if tile.tile_type == Space => {
+                                        let index = self.get_index(pos.right());
+                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                        let index = self.get_index(pos);
+                                        self.tiles[index].tile_type = Wall;
+                                    }
+                                    _ => {
+                                        let index = self.get_index(pos.right());
+                                        self.tiles[index].tile_type = Wall;
+                                        let index = self.get_index(pos);
+                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                    }
+                                }
+                            }
+                            _ => (),
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    fn LoadVerticalPortals(&mut self) {
+        for x in 0..self.w {
+            for y in 0..self.h - 1 {
+                let pos = Pos::new(x, y);
+                match self.get_tile(pos).unwrap().tile_type {
+                    PortalPiece(c1) => {
+                        let tile2 = self.get_tile(pos.down()).unwrap();
+                        match tile2.tile_type {
+                            PortalPiece(c2) => {
+                                let s = c1.to_string() + &c2.to_string();
+                                match self.get_tile(pos.down().down()) {
+                                    Some(tile) if tile.tile_type == Space => {
+                                        let index = self.get_index(pos.down());
+                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                        let index = self.get_index(pos);
+                                        self.tiles[index].tile_type = Wall;
+                                    }
+                                    _ => {
+                                        let index = self.get_index(pos.down());
+                                        self.tiles[index].tile_type = Wall;
+                                        let index = self.get_index(pos);
+                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                    }
+                                }
+                            }
+                            _ => (),
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
     }
 }
 use Dir::*;
@@ -173,83 +284,7 @@ impl Tile {
     }
 }
 
-fn PortalStringToTile(s:&str) -> TileType {
-    if s == "AA" {
-        Start
-    } else if s == "ZZ" {
-        End
-    } else {
-        Portal(s.to_string())
-    }
-}
 
-fn LoadHorizontalPortals(map: &mut Map) {
-    for y in 0..map.h {
-        for x in 0..map.w - 1 {
-            let pos = Pos::new(x, y);
-            match map.get_tile(pos).unwrap().tile_type {
-                PortalPiece(c1) => {
-                    let tile2 = map.get_tile(pos.right()).unwrap();
-                    match tile2.tile_type {
-                        PortalPiece(c2) => {
-                            let s = c1.to_string() + &c2.to_string();
-                            match map.get_tile(pos.right().right()) {
-                                Some(tile) if tile.tile_type == Space => {
-                                    let index = map.get_index(pos.right());
-                                    map.tiles[index].tile_type = PortalStringToTile(&s);
-                                    let index = map.get_index(pos);
-                                    map.tiles[index].tile_type = Wall;
-                                }
-                                _ => {
-                                    let index = map.get_index(pos.right());
-                                    map.tiles[index].tile_type = Wall;
-                                    let index = map.get_index(pos);
-                                    map.tiles[index].tile_type = PortalStringToTile(&s);
-                                }
-                            }
-                        }
-                        _ => (),
-                    }
-                }
-                _ => (),
-            }
-        }
-    }
-}
-
-fn LoadVerticalPortals(map: &mut Map) {
-    for x in 0..map.w {
-        for y in 0..map.h - 1 {
-            let pos = Pos::new(x, y);
-            match map.get_tile(pos).unwrap().tile_type {
-                PortalPiece(c1) => {
-                    let tile2 = map.get_tile(pos.down()).unwrap();
-                    match tile2.tile_type {
-                        PortalPiece(c2) => {
-                            let s = c1.to_string() + &c2.to_string();
-                            match map.get_tile(pos.down().down()) {
-                                Some(tile) if tile.tile_type == Space => {
-                                    let index = map.get_index(pos.down());
-                                    map.tiles[index].tile_type = PortalStringToTile(&s);
-                                    let index = map.get_index(pos);
-                                    map.tiles[index].tile_type = Wall;
-                                }
-                                _ => {
-                                    let index = map.get_index(pos.down());
-                                    map.tiles[index].tile_type = Wall;
-                                    let index = map.get_index(pos);
-                                    map.tiles[index].tile_type = PortalStringToTile(&s);
-                                }
-                            }
-                        }
-                        _ => (),
-                    }
-                }
-                _ => (),
-            }
-        }
-    }
-}
 
 fn main() {
     let mut w = 0;
@@ -296,11 +331,8 @@ fn main() {
         y += 1;
     }
     let h = y as usize;
-    let mut map = Map { w, h, tiles };
+    let map = Map::new(tiles,w,h);
     map.print();
 
-    LoadHorizontalPortals(&mut map);
-    LoadVerticalPortals(&mut map);
-    println!("!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    map.print();
+
 }

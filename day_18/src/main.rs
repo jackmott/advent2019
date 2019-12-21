@@ -260,8 +260,7 @@ fn build_map_graph(
     }
 }
 
-
-fn indices_to_string(indices:&Vec<NodeIndex<usize>>) -> String{
+fn indices_to_string(indices: &Vec<NodeIndex<usize>>) -> String {
     indices.iter().map(|i| i.index().to_string()).collect()
 }
 
@@ -333,7 +332,6 @@ fn main() {
     }
     println!("key nodes after building graph:{:?}", key_nodes);
 
-
     println!("key nodes:{:?}", key_nodes);
     let key_node_map: HashMap<Keys, NodeIndex<usize>> = key_nodes
         .iter()
@@ -344,9 +342,6 @@ fn main() {
         })
         .collect();
     println!("key node map:{:?}", key_node_map);
-
-
-
 
     let mut queue = VecDeque::new();
     let mut cost_map = HashMap::new();
@@ -376,79 +371,70 @@ fn main() {
             old_queue_size = queue.len()
         }
         for next_key in key_vec.iter().filter(|key| !current_keys.contains(**key)) {
-            for (i,_) in current_nodes.iter().enumerate() {
-
-            let next_node = key_node_map[next_key];
-            let mut next_nodes = current_nodes.clone();
-            let current_node = current_nodes[i];
-            next_nodes[i] = next_node;
-            //  println!("can I get from {:?} to {:?}?", current_key, next_key);
-            let cost = if path_map.contains_key(&(current_node, next_key, current_keys)) {
-                // println!("cache hit");
-                path_map[&(current_node, next_key, current_keys)]
-            } else {
-             //   println!("looking for {:?} to {:?}", current_key, next_key);
-              //  println!("{:?}", key_node_map);
-                let result = astar(
-                    &map_graph,
-                    current_node,
-                    |finish| finish == next_node,
-                    |e| {
-                        if !current_keys.contains(map_graph[e.target()].door)
-                            && e.target() != key_node_map[next_key]
-                        {
-                            //println!("edge:{:?} -> {:?}",map_graph[e.source()].pos, map_graph[e.target()].pos);
-                            9999999
-                        } else {
-                            //println!("edge:{:?} -> {:?}",map_graph[e.source()].pos, map_graph[e.target()].pos);
-                            *e.weight()
-                        }
-                    },
-                    |n| {
-                        if !current_keys.contains(map_graph[n].door) {
-                            9999999
-                        } else {
-                            let start_pos = map_graph[n].pos;
-                            let end_pos = map_graph[next_node].pos;
-                            (start_pos.x as i32 - end_pos.x as i32).abs() + (start_pos.y as i32 - end_pos.y as i32).abs()
-                        }
-                    },
-                );
-                match result {
-                    Some((cost, _)) => cost,
-                    None => 9999999,
+            for (i, _) in current_nodes.iter().enumerate() {
+                let next_node = key_node_map[next_key];
+                let mut next_nodes = current_nodes.clone();
+                let current_node = current_nodes[i];
+                next_nodes[i] = next_node;
+                //  println!("can I get from {:?} to {:?}?", current_key, next_key);
+                let cost = if path_map.contains_key(&(current_node, next_key, current_keys)) {
+                    // println!("cache hit");
+                    path_map[&(current_node, next_key, current_keys)]
+                } else {
+                    //   println!("looking for {:?} to {:?}", current_key, next_key);
+                    //  println!("{:?}", key_node_map);
+                    let result = astar(
+                        &map_graph,
+                        current_node,
+                        |finish| finish == next_node,
+                        |e| {
+                            if !current_keys.contains(map_graph[e.target()].door)
+                                && e.target() != key_node_map[next_key]
+                            {
+                                //println!("edge:{:?} -> {:?}",map_graph[e.source()].pos, map_graph[e.target()].pos);
+                                9999999
+                            } else {
+                                //println!("edge:{:?} -> {:?}",map_graph[e.source()].pos, map_graph[e.target()].pos);
+                                *e.weight()
+                            }
+                        },
+                        |n| {
+                            if !current_keys.contains(map_graph[n].door) {
+                                9999999
+                            } else {
+                                let start_pos = map_graph[n].pos;
+                                let end_pos = map_graph[next_node].pos;
+                                (start_pos.x as i32 - end_pos.x as i32).abs()
+                                    + (start_pos.y as i32 - end_pos.y as i32).abs()
+                            }
+                        },
+                    );
+                    match result {
+                        Some((cost, _)) => cost,
+                        None => 9999999,
+                    }
+                };
+                path_map.insert((current_node, next_key, current_keys), cost);
+                // println!("maybe at cost:{}", cost);
+                if cost >= 9999999 {
+                    continue;
                 }
-            };
-            path_map.insert((current_node, next_key, current_keys), cost);
-            // println!("maybe at cost:{}", cost);
-            if cost >= 9999999 {
-                continue;
-            }
-            // println!("yes at cost:{}", cost);
+                // println!("yes at cost:{}", cost);
 
-            let new_keys = *next_key | current_keys;
-            let new_cost = current_cost + cost;
-            let next_nodes_str = indices_to_string(&next_nodes);
-            match cost_map.get_mut(&(next_nodes_str.clone(), new_keys)) {
-                Some(cost) if *cost <= new_cost => continue,
-                Some(cost) => *cost = new_cost,
-                None => {
-                    let _ = cost_map.insert((next_nodes_str, new_keys), new_cost);
+                let new_keys = *next_key | current_keys;
+                let new_cost = current_cost + cost;
+                let next_nodes_str = indices_to_string(&next_nodes);
+                match cost_map.get_mut(&(next_nodes_str.clone(), new_keys)) {
+                    Some(cost) if *cost <= new_cost => continue,
+                    Some(cost) => *cost = new_cost,
+                    None => {
+                        let _ = cost_map.insert((next_nodes_str, new_keys), new_cost);
+                    }
                 }
-            }
-            /*  println!(
-                "currently have {:?} at cost {} considering {:?} with pathlen {} new cost:{}",
-                current_keys,
-                current_cost,
-                path.end_key,
-                path.path.len(),
-                new_cost
-            );*/
 
-            // println!("pushing {:?} with cost {} ", path.end_key, new_cost);
-            queue.push_back((new_cost, new_keys, next_nodes));
+                queue.push_back((new_cost, new_keys, next_nodes));
+            }
         }
-    }
     }
 
     println!("win!:{}", min_cost);

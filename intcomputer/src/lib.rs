@@ -163,6 +163,14 @@ impl SuperComputer {
         }
     }
 
+    pub fn reset(&mut self,digits:&Vec<i64>) {
+        let mut digits = digits.clone();
+        digits.resize(digits.len()*10,0);
+        self.sp = 0;
+        self.rb = 0;
+        self.digits = digits;
+    }
+
     pub fn run(&mut self) {
         loop {
             let instruction = self.digits[self.sp];

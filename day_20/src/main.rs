@@ -1,4 +1,3 @@
-use bitflags::*;
 use petgraph::algo::astar;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -9,77 +8,50 @@ use std::collections::VecDeque;
 use utils::*;
 use std::ops::BitOr;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-struct PortalId(u64);
-impl PortalId {
-    fn from_chars(c1:char,c2:char) -> PortalId{
-        let i1 = c1 as u64 - 'A' as u64;
-        let i2 = c2 as u64 - 'A' as u64;
-        let bitflag = 1 << i1+(i2+26);
-        PortalId(bitflag)
-    }
-
-    fn empty() -> PortalId {
-        PortalId(0)
-    }
-
-    fn contains(&self,id:PortalId) -> u64 {
-        self.0 & id.0
-    }
-}
-
-impl BitOr for PortalId {
-    type Output = Self;
-
-    fn bitor(self, rhs: Self) -> Self {
-        PortalId(self.0 | rhs.0)
-    }
-}
-
 struct Map {
     tiles: Vec<Tile>,
     w: usize,
     h: usize,
 }
 impl Map {
-    fn get_neighbors(&self, pos: Pos) -> Vec<(Pos, bool)> {
+    fn get_neighbors(&self,tile:Tile) -> Vec<&Tile> {
         let mut result = Vec::new();
-
-        let (open, visited) = self.is_open(pos.up());
-        if open {
-            result.push((pos.up(), visited));
+        match self.get_tile(tile.pos.up()) {
+            Some(tile) => result.push(tile),
+            None => ()
         }
-
-        let (open, visited) = self.is_open(pos.down());
-        if open {
-            result.push((pos.down(), visited));
+        match self.get_tile(tile.pos.down()) {
+            Some(tile) => result.push(tile),
+            None => ()
         }
-
-        let (open, visited) = self.is_open(pos.left());
-        if open {
-            result.push((pos.left(), visited));
+        match self.get_tile(tile.pos.left()) {
+            Some(tile) => result.push(tile),
+            None => ()
         }
-
-        let (open, visited) = self.is_open(pos.right());
-        if open {
-            result.push((pos.right(), visited));
+        match self.get_tile(tile.pos.right()) {
+            Some(tile) => result.push(tile),
+            None => ()
         }
-
-        println!("get unvisited n for {:?}", pos);
-        println!("{:?}", result);
         result
     }
 
-    fn get_tile(&self, pos: Pos) -> &Tile {
-        let index = pos.y as usize * self.w + pos.x as usize;
-        &self.tiles[index]
+    fn get_tile(&self, pos: Pos) -> Option<&Tile> {
+        let index = pos.y * self.w as i32 + pos.x;
+        if index < 0 || index >= self.tiles.len() as i32 {
+            None 
+        } else {
+            Some(&self.tiles[index as usize])
+        }
     }
 
     fn get_index(&self, pos: Pos) -> usize {
-        pos.y * self.w + pos.x
+        pos.y as usize * self.w + pos.x as usize
     }
-    fn is_open(&self, pos: Pos) -> (bool, bool) {
-        self.get_tile(pos).is_open()
+    fn from_index(&self,index:usize) -> Pos {
+        Pos {
+            x: (index%self.w) as i32,
+            y: (index/self.w) as i32
+        }
     }
     fn visit(&mut self, pos: Pos) {
         let index = self.get_index(pos);
@@ -88,8 +60,8 @@ impl Map {
 }
 #[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 struct Pos {
-    x: usize,
-    y: usize,
+    x: i32,
+    y: i32,
 }
 impl Pos {
     fn up(&self) -> Pos {
@@ -122,11 +94,12 @@ impl Pos {
 }
 
 use TileType::*;
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum TileType {
     Space,
     Wall,
-    Portal(PortalId),
+    Portal(String),
+    PortalPiece(char),
     Start,
     End,
 }
@@ -140,7 +113,7 @@ impl TileType {
 
     fn from_char(c: char) -> TileType {
         match c {
-            _ if c >= 'A' && c <= 'Z' => Portal(PortalId::empty()),
+            _ if c >= 'A' && c <= 'Z' => PortalPiece(c),
             '.' => Space,
             '#' => Wall,
             ' ' => Wall,
@@ -178,7 +151,7 @@ fn main() {
         w = line.len();
         let mut x = 0;
         for c in line.chars() {
-            let tile = Tile::from_char(c, Pos { x, y });
+            let tile = Tile::from_char(c, Pos { x:x as i32, y:y as i32});
             match tile.tile_type {
                 Portal(_) => portal_count += 1,
                 _ => (),
@@ -188,30 +161,28 @@ fn main() {
         }
         y += 1;
     }
-    println!("portal_count:{}",portal_count);
-    let portalId1 = PortalId::from_chars('A','A');
-    println!("portalId1:{:?}",portalId1);
-    let portalId2 = PortalId::from_chars('A','B');
-    println!("portalId2:{:?}",portalId2);
-    let portalId2 = PortalId::from_chars('A','C');
-    println!("portalId2:{:?}",portalId2);
-    let portalId3 = PortalId::from_chars('B','A');
-    println!("portalId3:{:?}",portalId3);
-    let portalId4 = PortalId::from_chars('Z','Z');
-    println!("portalId4:{:?}",portalId4);
-    let portalId4 = PortalId::from_chars('A','Z');
-    println!("portalId4:{:?}",portalId4);
-    let portalId4 = PortalId::from_chars('B','Z');
-    println!("portalId4:{:?}",portalId4);
-
-    let test = PortalId::from_chars('A','A') |  PortalId::from_chars('A','B');
-    println!("AA {:b}",PortalId::from_chars('A','A').0);
-    println!("AB {:b}",PortalId::from_chars('A','B').0);
-    println!("AA {:b}",PortalId::from_chars('Z','Z').0);
-    println!("AB {:b}",test.contains(PortalId::from_chars('B','A')));
-    println!("test contains: {}",test.contains(PortalId::from_chars('A','A')));
-    println!("test contains: {}",test.contains(PortalId::from_chars('A','B')));
-    println!("test contains: {}",test.contains(PortalId::from_chars('B','A')));
+    let h = y as usize;
+    let mut map = Map {w,h,tiles};
+    for y in 0 .. h {
+        for x in 0..2 {
+            let pos = Pos {x:x as i32,y:y as i32};
+            let tile1 = map.get_tile(pos).unwrap();
+            match tile1.tile_type {
+                PortalPiece(c1) => {
+                    let tile2 = map.get_tile(pos.right()).unwrap();
+                    match tile2.tile_type {
+                        PortalPiece(c2) => {
+                            let s = c1.to_string()+&c2.to_string();
+                            map.tiles[map.get_index(pos)].tile_type = Wall;
+                            map.tiles[map.get_index(pos.right())].tile_type = Portal(s);
+                        }
+                        _ => panic!("bad input portal")
+                    }
+                }
+                _ => ()
+            }
+        }
+    }   
 
 
 

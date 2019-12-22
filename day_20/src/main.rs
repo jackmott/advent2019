@@ -14,7 +14,8 @@ struct Map {
     start: Pos,
     end: Pos,
     tiles: Vec<Tile>,
-    portal_map: HashMap<String, (Option<Pos>,Option<Pos>)>,
+    inner_portals: HashMap<String, Pos>,
+    outer_portals: HashMap<String, Pos>,
     w: usize,
     h: usize,
 }
@@ -26,7 +27,8 @@ impl Map {
             start:Pos{x:0,y:0},
             end:Pos{x:0,y:0},
             tiles,
-            portal_map: HashMap::new(),
+            inner_portals: HashMap::new(),
+            outer_portals:HashMap::new(),
             w,
             h,
         };
@@ -48,51 +50,26 @@ impl Map {
         map.end = end;
 
 
-        let portals: Vec<&Tile> = map
+        map.inner_portals = map
             .tiles
             .iter()
-            .filter(|tile| match &tile.tile_type {
-                Portal(_) => true,
-                _ => false,
+            .filter_map(|tile| match &tile.tile_type {
+                InnerPortal(s) => Some((s.to_string(),tile.pos)),
+                _ => None,
             })
             .collect();
-        let portals = portals
+
+        map.outer_portals = map
+            .tiles
             .iter()
-            .map(|tile1| {
-                println!("trying to find {:?}", tile1);
-                let portal1_string = match &tile1.tile_type {
-                    Portal(s) => s,
-                    _ => panic!("wat"),
-                };
-                let tile2 = portals
-                    .iter()
-                    .find(|tile2| {
-                        let portal2_string = match &tile2.tile_type {
-                            Portal(s) => s,
-                            _ => panic!("wat"),
-                        };
-                        tile2.pos != tile1.pos && portal1_string == portal2_string
-                    })
-                    .unwrap();
-                (portal1_string.to_string(), tile2.pos)
-            });
-        let mut portal_map : HashMap<String,(Option<Pos>,Option<Pos>)> = HashMap::new();
-        for (portal_string,pos) in portals {
-            match portal_map.get(&portal_string) {
-                Some((a,b)) => {
-                    let a = *a;
-                    let b = *b;
-                    if a.is_some() {
-                        portal_map.insert(portal_string,(a,Some(pos)));
-                    } else {
-                        portal_map.insert(portal_string,(b,Some(pos)));
-                    }
-                }
-                None => { let _ = portal_map.insert(portal_string,(Some(pos),None));},
-            };
-        }
-        map.portal_map = portal_map;
-        println!("portal map len:{}", map.portal_map.len());
+            .filter_map(|tile| match &tile.tile_type {
+                OuterPortal(s) => Some((s.to_string(),tile.pos)),
+                _ => None,
+            })
+            .collect();
+
+
+        debug_assert!(map.outer_portals.len() == map.inner_portals.len());
         map
     }
 
@@ -109,7 +86,8 @@ impl Map {
                 {
                     Wall => print!("#"),
                     Space => print!("."),
-                    Portal(_) => print!("P"),
+                    InnerPortal(_) => print!("I"),
+                    OuterPortal(_) => print!("O"),
                     PortalPiece(c) => print!("{}", c),
                     Start => print!("S"),
                     End => print!("E"),
@@ -135,23 +113,18 @@ impl Map {
         Dir::iter()
             .filter_map(|dir| self.get_tile(pos.dir(dir)))
             .filter(|tile| match tile.tile_type {
-                Space | Portal(_) | Start | End => true,
+                Space | InnerPortal(_) | OuterPortal(_) | Start | End => true,
                 _ => false,
             })
             .map(|tile| match &tile.tile_type {
                 Start | End | Space => tile.pos,
-                Portal(s) => {
-                    println!("getting a portal naybor at pos {:?} named {} going to pos:",pos,s);
-                    let (portal1,portal2)  = self.portal_map[s];
-                    let portal1 = portal1.unwrap();
-                    let portal2 = portal2.unwrap();
-                    if portal1 != pos {
-                        println!("{:?}",portal1);
-                        portal1
-                    } else {
-                        println!("{:?}",portal2);
-                        portal2
-                    }
+                InnerPortal(s) => {
+                    println!("at pos {:?} found portal {} goes to {:?}",pos,s,self.outer_portals[s]);
+                    self.outer_portals[s]
+                }
+                OuterPortal(s) => {
+                    println!("at pos {:?} found portal {} goes to {:?}",pos,s,self.inner_portals[s]);
+                    self.inner_portals[s]
                 }
                 _ => panic!("previous filtering has gone bad"),
             })
@@ -177,13 +150,27 @@ impl Map {
         }
     }
 
-    fn PortalStringToTile(s: &str) -> TileType {
+    fn PortalStringToTileHorizontal(&self,s: &str,pos:Pos) -> TileType {
         if s == "AA" {
             Start
         } else if s == "ZZ" {
             End
+        } else if pos.x < 2 || pos.x >= self.w as i32-2 {
+            OuterPortal(s.to_string())
         } else {
-            Portal(s.to_string())
+            InnerPortal(s.to_string())
+        }
+    }
+
+    fn PortalStringToTileVertical(&self,s: &str,pos:Pos) -> TileType {
+        if s == "AA" {
+            Start
+        } else if s == "ZZ" {
+            End
+        } else if pos.y < 2 || pos.y >= self.h as i32 -2 {
+            OuterPortal(s.to_string())
+        } else {
+            InnerPortal(s.to_string())
         }
     }
 
@@ -200,7 +187,7 @@ impl Map {
                                 match self.get_tile(pos.right().right()) {
                                     Some(tile) if tile.tile_type == Space => {
                                         let index = self.get_index(pos.right().right());
-                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                        self.tiles[index].tile_type = self.PortalStringToTileHorizontal(&s,pos);
                                         let index = self.get_index(pos.right());
                                         self.tiles[index].tile_type = Wall;
                                         let index = self.get_index(pos);
@@ -212,7 +199,7 @@ impl Map {
                                         let index = self.get_index(pos);
                                         self.tiles[index].tile_type = Wall;
                                         let index = self.get_index(pos.left());
-                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                        self.tiles[index].tile_type = self.PortalStringToTileHorizontal(&s,pos);
                                     }
                                 }
                             }
@@ -238,7 +225,7 @@ impl Map {
                                 match self.get_tile(pos.down().down()) {
                                     Some(tile) if tile.tile_type == Space => {
                                         let index = self.get_index(pos.down().down());
-                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                        self.tiles[index].tile_type = self.PortalStringToTileVertical(&s,pos);
                                         let index = self.get_index(pos.down());
                                         self.tiles[index].tile_type = Wall;
                                         let index = self.get_index(pos);
@@ -250,7 +237,7 @@ impl Map {
                                         let index = self.get_index(pos);
                                         self.tiles[index].tile_type = Wall;
                                         let index = self.get_index(pos.up());
-                                        self.tiles[index].tile_type = Map::PortalStringToTile(&s);
+                                        self.tiles[index].tile_type =self.PortalStringToTileVertical(&s,pos);
                                     }
                                 }
                             }
@@ -325,7 +312,8 @@ use TileType::*;
 enum TileType {
     Space,
     Wall,
-    Portal(String),
+    InnerPortal(String),
+    OuterPortal(String),
     PortalPiece(char),
     Start,
     End,
@@ -384,14 +372,22 @@ fn build_graph(
 ) {
     let pos = graph[index].pos;
 
+
     for next_pos in map.get_neighbors(pos) {
+        let tile = map.get_tile(next_pos).unwrap();
+        // make the portal edge cost 2
+        let edge_cost = match tile.tile_type {
+            OuterPortal(_) |
+            InnerPortal(_) => 2,
+            _ => 1
+        };
         match pos_to_node.get(&next_pos) {
             Some(next_index) => {
-                let _ = graph.update_edge(index, *next_index, 1);
+                let _ = graph.update_edge(index, *next_index, edge_cost);
             }
             None => {
                 let next_index = graph.add_node(NodeData::new(next_pos));
-                let _ = graph.update_edge(index, next_index, 1);
+                let _ = graph.update_edge(index, next_index, edge_cost);
                 pos_to_node.insert(next_pos, next_index);
                 build_graph(next_index, map, graph, pos_to_node);
             }
@@ -453,15 +449,15 @@ fn main() {
         &graph,
         start_index,
         |finish| graph[finish].pos == map.end,
-        |_| 1,
+        |e| *e.weight(),
         |n| {
-                let start_pos = graph[n].pos;
-                let end_pos = map.end;
-                (start_pos.x as i32 - end_pos.x as i32).abs()
-                    + (start_pos.y as i32 - end_pos.y as i32).abs()
-
+               0
         },
     ).unwrap();
+
+    let path : Vec<Pos> = path.iter().map(|i| graph[*i].pos).collect();
+
+    println!("path:{:?}",path);
 
     println!("cost:{}",cost);
 

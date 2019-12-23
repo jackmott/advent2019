@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 use utils::*;
-const MAX_DEPTH: i32 = 25;
+
+const MAX_DEPTH: i32 = 25;  // Max depth for inception graph.
 
 struct Map {
     start: Pos,
@@ -306,9 +307,9 @@ enum TileType {
     Wall,
     InnerPortal(String),
     OuterPortal(String),
-    PortalPiece(char),
-    Start,
-    End,
+    PortalPiece(char), //an intermediate state on intial load eg "AA" is two pieces
+    Start, //AA
+    End,   //ZZ
 }
 impl TileType {
     fn from_char(c: char) -> TileType {
@@ -398,7 +399,8 @@ fn build_inception_graph(
 
         for next_pos in map.get_neighbors(pos, depth) {
             let tile = map.get_tile(next_pos).unwrap();
-            // make the portal edge cost 2
+            // make the portal edge cost 2 because of the way
+            // we account for them on the map
             let edge_cost = match tile.tile_type {
                 OuterPortal(_) | InnerPortal(_) => 2,
                 _ => 1,

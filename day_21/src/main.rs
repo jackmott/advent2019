@@ -65,15 +65,11 @@ fn part2() {
 
     });
 
-    //if (not e and d and h) or (not a) jump
 
-    term.send_stringln("NOT E J");  // NOT E and D and H
+
+
+    term.send_stringln("NOT A J");
     term.send_stringln("AND D J");
-    term.send_stringln("AND H J");
-
-    term.send_stringln("NOT A T");  //or NOT A
-    term.send_stringln("OR T J");
-
     term.send_stringln("RUN");
 
     for line in term.recv_stringln() {

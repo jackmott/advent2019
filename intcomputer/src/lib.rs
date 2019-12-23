@@ -50,6 +50,51 @@ impl Term {
         }
     }
 
+    pub fn recv_stringln(&self) -> std::vec::IntoIter<String> {
+        let mut result : Vec<String> = Vec::new();
+        let mut line = Vec::new();
+        loop {
+            match self.receiver.recv() {
+                Ok(data) => {
+                    if data == 10 {
+                        result.push(line.iter().collect());
+                        line = Vec::new();
+                    } else {
+                        line.push(data as u8 as char);
+                    }
+                }
+                Err(_) => return result.into_iter()
+            }
+        }
+    }
+
+    pub fn recv_one_line(&self) -> String {
+        let mut line = Vec::new();
+        loop {
+            match self.receiver.recv() {
+                Ok(data) => {
+                    if data == 10 {
+                        return line.iter().collect();
+                    } else {
+                        line.push(data as u8 as char);
+                    }
+                }
+                Err(_) => return line.iter().collect()
+            }
+        }
+    }
+
+    pub fn send_stringln(&self,s:&str) {
+        print!("sending:");
+        for c in s.chars() {
+            let data = c as i64;
+            print!("{}",c);
+            self.send(data);
+        }
+        self.send(10);
+        println!("");
+    }
+
     pub fn send_string(&self,s:&str) {
         for c in s.chars() {
             let data = c as i64;

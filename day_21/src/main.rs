@@ -67,10 +67,10 @@ fn part2() {
 
 
 
-
+    term.send_stringln("NOT C T");
+    term.send_stringln("AND D T");
     term.send_stringln("NOT A J");
-    term.send_stringln("AND D J");
-
+    term.send_stringln("OR T J");
     term.send_stringln("RUN");
 
     for line in term.recv_stringln() {
